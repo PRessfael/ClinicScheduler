@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register function
-  const register = async (username, password, role = "user") => {
+  const register = async (username, password) => {
     try {
       // In a real app, this would make a request to a server API
       // For this prototype, we'll simulate user registration with localStorage
@@ -58,6 +58,9 @@ export const AuthProvider = ({ children }) => {
       if (existingUsers.some(user => user.username === username)) {
         return { success: false, error: "Username already exists" };
       }
+      
+      // Determine role based on username - if it contains "admin", assign admin role
+      const role = username.toLowerCase().includes("admin") ? "admin" : "user";
       
       // Create the new user
       const newUser = {

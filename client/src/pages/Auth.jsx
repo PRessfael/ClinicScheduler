@@ -9,8 +9,7 @@ const Auth = ({ type = "login" }) => {
     username: "",
     email: "",
     password: "",
-    confirmPassword: "",
-    role: "user"
+    confirmPassword: ""
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +69,7 @@ const Auth = ({ type = "login" }) => {
           }
         } else {
           // Handle registration
-          const result = await register(formData.username, formData.password, formData.role);
+          const result = await register(formData.username, formData.password);
           if (!result.success) {
             setFormErrors({ general: result.error || "Registration failed" });
           }
@@ -176,20 +175,9 @@ const Auth = ({ type = "login" }) => {
                   )}
                 </div>
                 
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                    Account Type
-                  </label>
-                  <select
-                    id="role"
-                    name="role"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]"
-                    value={formData.role}
-                    onChange={handleChange}
-                  >
-                    <option value="user">Patient</option>
-                    <option value="admin">Staff/Admin</option>
-                  </select>
+                <div className="text-sm text-gray-600 bg-gray-100 p-3 rounded-md">
+                  <p className="font-medium">Note:</p>
+                  <p>Users with "admin" in their username will be registered as staff members with administrative privileges. All other users will be registered as patients.</p>
                 </div>
               </>
             )}
