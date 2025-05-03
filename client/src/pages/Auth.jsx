@@ -174,11 +174,6 @@ const Auth = ({ type = "login" }) => {
                     <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
                   )}
                 </div>
-                
-                <div className="text-sm text-gray-600 bg-gray-100 p-3 rounded-md">
-                  <p className="font-medium">Note:</p>
-                  <p>Users with "admin" in their username will be registered as staff members with administrative privileges. All other users will be registered as patients.</p>
-                </div>
               </>
             )}
 
