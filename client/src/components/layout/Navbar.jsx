@@ -1,21 +1,41 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import MobileMenu from "./MobileMenu";
+import { useAuth } from "../../hooks/useAuth";
 
 const Navbar = () => {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout, isAdmin } = useAuth();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  const navLinks = [
+  // Define navigation links based on user role
+  let navLinks = [
     { href: "/", label: "Home" },
-    { href: "/appointments", label: "Appointments" },
-    { href: "/records", label: "Records" },
     { href: "/contact", label: "Contact Us" },
   ];
+
+  if (user) {
+    // Add dashboard link for all authenticated users
+    navLinks.push({ href: "/dashboard", label: "Dashboard" });
+    
+    if (isAdmin()) {
+      // Admin-specific links
+      navLinks.push({ href: "/records", label: "Patient Records" });
+    } else {
+      // Regular user links
+      navLinks.push({ href: "/appointments", label: "Appointments" });
+    }
+  }
+
+  const handleLogout = (e) => {
+    e.preventDefault();
+    logout();
+    // No need to redirect, AuthProvider will handle it
+  };
 
   return (
     <header className="bg-[#1e5631] shadow-md">
@@ -43,18 +63,34 @@ const Navbar = () => {
           ))}
 
           <div className="flex space-x-2 ml-4">
-            <Link
-              href="/login"
-              className="bg-[#ffd700] text-[#1e5631] px-4 py-1.5 rounded-md font-semibold hover:bg-[#ffff52] transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="bg-[#ffd700] text-[#1e5631] px-4 py-1.5 rounded-md font-semibold hover:bg-[#ffff52] transition-colors"
-            >
-              Register
-            </Link>
+            {user ? (
+              <>
+                <div className="text-white px-4 py-1.5 font-medium">
+                  Welcome, {user.username}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="bg-[#ffd700] text-[#1e5631] px-4 py-1.5 rounded-md font-semibold hover:bg-[#ffff52] transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="bg-[#ffd700] text-[#1e5631] px-4 py-1.5 rounded-md font-semibold hover:bg-[#ffff52] transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-[#ffd700] text-[#1e5631] px-4 py-1.5 rounded-md font-semibold hover:bg-[#ffff52] transition-colors"
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </nav>
 
@@ -78,7 +114,13 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Navigation */}
-      <MobileMenu isOpen={mobileMenuOpen} currentPath={location} />
+      <MobileMenu 
+        isOpen={mobileMenuOpen} 
+        currentPath={location} 
+        user={user} 
+        logout={handleLogout}
+        navLinks={navLinks}
+      />
     </header>
   );
 };
