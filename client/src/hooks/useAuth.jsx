@@ -1,61 +1,46 @@
 import { createContext, useState, useContext, useEffect } from "react";
-import { useLocation } from "wouter";
 
-// Create an auth context
-const AuthContext = createContext();
+// Create context
+const AuthContext = createContext(null);
 
-// Create the provider component
+// Auth provider component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [, navigate] = useLocation();
 
-  // Check if the user is logged in on initial load
+  // On component mount, try to retrieve user from localStorage
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/user");
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
 
   // Login function
   const login = async (username, password) => {
     try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Login failed");
-      }
-
-      const userData = await response.json();
-      setUser(userData);
+      // In a real app, this would make a request to a server API
+      // For this prototype, we'll simulate a successful login with a mock user
       
-      // Redirect based on role
-      if (userData.role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
-        navigate("/dashboard");
+      // Find the user by username (would be a server call in a real app)
+      const mockedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      const foundUser = mockedUsers.find(u => u.username === username);
+      
+      if (!foundUser || foundUser.password !== password) {
+        return { success: false, error: "Invalid username or password" };
       }
+      
+      // Remove password before storing in state/localStorage
+      const { password: _, ...userWithoutPassword } = foundUser;
+      
+      // Set the user in state and localStorage
+      setUser(userWithoutPassword);
+      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       
       return { success: true };
     } catch (error) {
+      console.error("Login error:", error);
       return { success: false, error: error.message };
     }
   };
@@ -63,71 +48,75 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (username, password, role = "user") => {
     try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password, role }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Registration failed");
-      }
-
-      const userData = await response.json();
-      setUser(userData);
+      // In a real app, this would make a request to a server API
+      // For this prototype, we'll simulate user registration with localStorage
       
-      // Redirect based on role
-      if (userData.role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
-        navigate("/dashboard");
+      // Get existing users or create empty array
+      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      
+      // Check if username already exists
+      if (existingUsers.some(user => user.username === username)) {
+        return { success: false, error: "Username already exists" };
       }
+      
+      // Create the new user
+      const newUser = {
+        id: Date.now(), // simple ID generation
+        username,
+        password, // In a real app, NEVER store plain text passwords
+        role
+      };
+      
+      // Add to "database"
+      existingUsers.push(newUser);
+      localStorage.setItem("users", JSON.stringify(existingUsers));
+      
+      // Login the user
+      const { password: _, ...userWithoutPassword } = newUser;
+      setUser(userWithoutPassword);
+      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       
       return { success: true };
     } catch (error) {
+      console.error("Registration error:", error);
       return { success: false, error: error.message };
     }
   };
 
   // Logout function
-  const logout = async () => {
-    try {
-      await fetch("/api/logout", {
-        method: "POST",
-      });
-      setUser(null);
-      navigate("/");
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
   };
 
-  // Check if user is admin
+  // Check if user is an admin
   const isAdmin = () => {
-    return user && user.role === "admin";
+    return user?.role === "admin";
   };
 
-  // Provide the context value
-  const value = {
+  const authContextValue = {
     user,
     loading,
     login,
     register,
     logout,
-    isAdmin,
+    isAdmin
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={authContextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// Custom hook to use the auth context
+// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
+
+export default useAuth;

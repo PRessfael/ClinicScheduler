@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { useAuth } from "../hooks/useAuth";
 
 const Auth = ({ type = "login" }) => {
   const [location, setLocation] = useLocation();
+  const { login, register } = useAuth();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    role: "user"
   });
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isLogin = type === "login";
   const title = isLogin ? "Login to Your Account" : "Create an Account";
@@ -25,7 +29,7 @@ const Auth = ({ type = "login" }) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const errors = {};
@@ -56,10 +60,26 @@ const Auth = ({ type = "login" }) => {
     setFormErrors(errors);
     
     if (Object.keys(errors).length === 0) {
-      // In a real app, this would make an API call to authenticate or register
-      // For now, simulate success and redirect
-      alert(`${isLogin ? "Login" : "Registration"} successful!`);
-      setLocation("/");
+      setIsSubmitting(true);
+      try {
+        if (isLogin) {
+          // Handle login
+          const result = await login(formData.username, formData.password);
+          if (!result.success) {
+            setFormErrors({ general: result.error || "Login failed" });
+          }
+        } else {
+          // Handle registration
+          const result = await register(formData.username, formData.password, formData.role);
+          if (!result.success) {
+            setFormErrors({ general: result.error || "Registration failed" });
+          }
+        }
+      } catch (error) {
+        setFormErrors({ general: error.message || "An error occurred" });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -71,6 +91,11 @@ const Auth = ({ type = "login" }) => {
         </div>
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {formErrors.general && (
+              <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                <span className="block sm:inline">{formErrors.general}</span>
+              </div>
+            )}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                 Username
@@ -131,24 +156,42 @@ const Auth = ({ type = "login" }) => {
             </div>
 
             {!isLogin && (
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  className={`mt-1 block w-full px-3 py-2 border ${
-                    formErrors.confirmPassword ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                />
-                {formErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
-                )}
-              </div>
+              <>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                    Confirm Password
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    className={`mt-1 block w-full px-3 py-2 border ${
+                      formErrors.confirmPassword ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                  />
+                  {formErrors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                    Account Type
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]"
+                    value={formData.role}
+                    onChange={handleChange}
+                  >
+                    <option value="user">Patient</option>
+                    <option value="admin">Staff/Admin</option>
+                  </select>
+                </div>
+              </>
             )}
 
             {isLogin && (
@@ -162,9 +205,20 @@ const Auth = ({ type = "login" }) => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4caf50] hover:bg-[#087f23] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e5631]"
+                disabled={isSubmitting}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4caf50] hover:bg-[#087f23] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e5631] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {buttonText}
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {isLogin ? "Logging in..." : "Creating account..."}
+                  </>
+                ) : (
+                  buttonText
+                )}
               </button>
             </div>
           </form>
