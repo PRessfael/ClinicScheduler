@@ -1,3 +1,4 @@
+import supabase from "../config/supabaseClient";
 import { Link } from "wouter";
 import HeroSection from "@/components/home/HeroSection";
 import ServiceCard from "@/components/home/ServiceCard";
@@ -5,6 +6,8 @@ import InformationSection from "@/components/home/InformationSection";
 import { SERVICES } from "@/lib/constants.jsx";
 
 const Home = () => {
+  console.log(supabase)
+  
   return (
     <section id="home" className="pt-8 pb-16">
       <div className="container mx-auto px-4">
