@@ -7,10 +7,6 @@ import { useState, useEffect } from 'react'
 import supabase from '../config/supabase'
 
 const Home = () => {
-  console.log(import.meta.env.VITE_SUPABASE_URL);
-  console.log(import.meta.env.VITE_SUPABASE_ANON_KEY);
-
-
   return (
     <section id="home" className="pt-8 pb-16">
       <div className="container mx-auto px-4">
