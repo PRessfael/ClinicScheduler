@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
-import { useAuth } from "../hooks/useAuth";
+import supabase from "../config/supabase";
 
 const Auth = ({ type = "login" }) => {
   const [location, setLocation] = useLocation();
-  const { login, register } = useAuth();
   const [formData, setFormData] = useState({
-    username: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    userType: "patient", // Default user type
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,8 +16,8 @@ const Auth = ({ type = "login" }) => {
   const isLogin = type === "login";
   const title = isLogin ? "Login to Your Account" : "Create an Account";
   const buttonText = isLogin ? "Login" : "Register";
-  const toggleText = isLogin 
-    ? "Don't have an account? " 
+  const toggleText = isLogin
+    ? "Don't have an account? "
     : "Already have an account? ";
   const toggleLink = isLogin ? "Register" : "Login";
   const toggleUrl = isLogin ? "/register" : "/login";
@@ -30,48 +29,91 @@ const Auth = ({ type = "login" }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const errors = {};
-    
-    if (!formData.username.trim()) {
-      errors.username = "Username is required";
-    }
-    
-    if (!isLogin && !formData.email.trim()) {
+
+    if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (
-      !isLogin && 
       !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(formData.email)
     ) {
       errors.email = "Invalid email address";
     }
-    
+
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (!isLogin && formData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
     }
-    
+
     if (!isLogin && formData.password !== formData.confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
     }
-    
+
     setFormErrors(errors);
-    
+
     if (Object.keys(errors).length === 0) {
       setIsSubmitting(true);
       try {
         if (isLogin) {
-          // Handle login
-          const result = await login(formData.username, formData.password);
-          if (!result.success) {
-            setFormErrors({ general: result.error || "Login failed" });
+          // Handle login with Supabase
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password,
+          });
+        
+          if (authError) {
+            setFormErrors({ general: authError.message });
+          } else {
+            console.log("Login successful:", authData);
+        
+            // Fetch user details from the `users` table
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("user_type")
+              .eq("email", formData.email)
+              .single();
+        
+            if (userError) {
+              setFormErrors({ general: userError.message });
+            } else {
+              console.log("User type:", userData.user_type);
+        
+              // Redirect based on user type
+              if (userData.user_type === "admin") {
+                setLocation("/admin"); // Redirect to admin dashboard
+              } else {
+                setLocation("/user"); // Redirect to user dashboard
+              }
+            }
           }
         } else {
-          // Handle registration
-          const result = await register(formData.username, formData.password);
-          if (!result.success) {
-            setFormErrors({ general: result.error || "Registration failed" });
+          // Handle registration with Supabase
+          const { data, error } = await supabase.auth.signUp({
+            email: formData.email,
+            password: formData.password,
+          });
+
+          if (error) {
+            setFormErrors({ general: error.message });
+          } else {
+            // Insert additional user data into the `users` table
+            const { error: insertError } = await supabase
+              .from("users")
+              .insert([
+                {
+                  email: formData.email,
+                  password: formData.password, // Consider hashing the password
+                  user_type: formData.userType,
+                },
+              ]);
+
+            if (insertError) {
+              setFormErrors({ general: insertError.message });
+            } else {
+              console.log("Registration successful:", data);
+              setLocation("/login"); // Redirect to login page
+            }
           }
         }
       } catch (error) {
@@ -96,44 +138,23 @@ const Auth = ({ type = "login" }) => {
               </div>
             )}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
               </label>
               <input
-                id="username"
-                name="username"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 className={`mt-1 block w-full px-3 py-2 border ${
-                  formErrors.username ? "border-red-500" : "border-gray-300"
+                  formErrors.email ? "border-red-500" : "border-gray-300"
                 } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
-                value={formData.username}
+                value={formData.email}
                 onChange={handleChange}
               />
-              {formErrors.username && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.username}</p>
+              {formErrors.email && (
+                <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
               )}
             </div>
-
-            {!isLogin && (
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  className={`mt-1 block w-full px-3 py-2 border ${
-                    formErrors.email ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
-                )}
-              </div>
-            )}
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
@@ -174,15 +195,24 @@ const Auth = ({ type = "login" }) => {
                     <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
                   )}
                 </div>
-              </>
-            )}
 
-            {isLogin && (
-              <div className="flex items-center justify-end">
-                <a href="#" className="text-sm text-[#1e5631] hover:underline">
-                  Forgot your password?
-                </a>
-              </div>
+                <div>
+                  <label htmlFor="userType" className="block text-sm font-medium text-gray-700">
+                    User Type
+                  </label>
+                  <select
+                    id="userType"
+                    name="userType"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]"
+                    value={formData.userType}
+                    onChange={handleChange}
+                  >
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <div>
@@ -191,17 +221,7 @@ const Auth = ({ type = "login" }) => {
                 disabled={isSubmitting}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4caf50] hover:bg-[#087f23] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e5631] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {isLogin ? "Logging in..." : "Creating account..."}
-                  </>
-                ) : (
-                  buttonText
-                )}
+                {isSubmitting ? "Submitting..." : buttonText}
               </button>
             </div>
           </form>
