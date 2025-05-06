@@ -61,6 +61,9 @@ const Auth = ({ type = "login" }) => {
             email: formData.email,
             password: formData.password,
           });
+
+          console.log("Auth Data:", authData);
+          console.log("Auth Error:", authError);
         
           if (authError) {
             setFormErrors({ general: authError.message });
@@ -68,11 +71,15 @@ const Auth = ({ type = "login" }) => {
             console.log("Login successful:", authData);
         
             // Fetch user details from the `users` table
+            console.log("Fetching user details for email:", formData.email);
             const { data: userData, error: userError } = await supabase
               .from("users")
               .select("user_type")
               .eq("email", formData.email)
               .single();
+            
+            console.log("User Data:", userData);
+            console.log("User Error:", userError);
         
             if (userError) {
               setFormErrors({ general: userError.message });
