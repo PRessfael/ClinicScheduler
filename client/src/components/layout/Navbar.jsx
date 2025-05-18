@@ -38,11 +38,16 @@ const Navbar = () => {
       navLinks.push({ href: "/appointments", label: "My Appointments" });
     }
   }
-
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
-    logout();
-    // No need to redirect, AuthProvider will handle it
+    console.log("Starting logout process...");
+    try {
+      await logout();
+      console.log("Logout successful");
+      setLocation("/"); // Redirect to home page after successful logout
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
