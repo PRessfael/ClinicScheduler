@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../lib/supabase";
+import EditPatientPopup from "../../components/ui/EditPatientPopup";
+import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
+import DeleteWarning from "../../components/ui/DeleteWarning";
+import AddPatientPopup from "../../components/ui/AddPatientPopup";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -11,13 +15,89 @@ const AdminDashboard = () => {
     completedAppointments: 0
   });
   
-  const [patients, setPatients] = useState([
-    { id: 1, name: "John Doe", age: 45, lastVisit: "2023-04-15", condition: "Hypertension" },
-    { id: 2, name: "Jane Smith", age: 32, lastVisit: "2023-04-12", condition: "Diabetes" },
-    { id: 3, name: "Mike Johnson", age: 28, lastVisit: "2023-04-08", condition: "Asthma" },
-    { id: 4, name: "Sarah Williams", age: 56, lastVisit: "2023-04-05", condition: "Arthritis" },
-    { id: 5, name: "David Brown", age: 37, lastVisit: "2023-03-30", condition: "Anxiety" }
-  ]);
+  const [patients, setPatients] = useState([]);
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [viewingPatient, setViewingPatient] = useState(null);
+  const [deletingPatient, setDeletingPatient] = useState(null);
+  const [addingPatient, setAddingPatient] = useState(false);
+
+  const deletePatient = async (recordId) => {
+    if (!recordId) {
+      console.error("Invalid record ID provided for deletion.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("patient_records")
+        .delete()
+        .eq("record_id", recordId);
+
+      if (error) throw error;
+
+      setPatients((prevPatients) => prevPatients.filter((patient) => patient.id !== recordId));
+    } catch (error) {
+      console.error("Error deleting patient record:", error);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingPatient) {
+      await deletePatient(deletingPatient);
+      setDeletingPatient(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingPatient(null);
+  };
+
+  const handleEditSave = (updatedPatient) => {
+    setPatients((prevPatients) =>
+      prevPatients.map((patient) =>
+        patient.id === editingPatient.id ? { ...patient, ...updatedPatient } : patient
+      )
+    );
+    setEditingPatient(null);
+  };
+
+  const handleAddPatientSave = () => {
+    // Refresh patient list or perform any additional actions after saving
+    setAddingPatient(false);
+  };
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("patient_records")
+          .select(`
+            record_id,
+            diagnosis,
+            treatment,
+            patients(first_name, last_name, age)
+          `)
+          .order("record_id", { ascending: true });
+
+        if (error) throw error;
+
+        const formattedPatients = data.map(record => ({
+          id: record.record_id, // Use record_id here
+          name: `${record.patients.first_name} ${record.patients.last_name}`,
+          age: record.patients.age,
+          condition: record.diagnosis,
+          treatment: record.treatment
+        }));
+
+        setPatients(formattedPatients);
+      } catch (error) {
+        console.error("Error fetching patient records:", error);
+      }
+    };
+
+    fetchPatients();
+  }, []);
+  
 //fetch total patients
   useEffect(() => {
     const fetchStats = async () => {
@@ -116,6 +196,7 @@ const AdminDashboard = () => {
     fetchCompletedAppointments();
   }, []);
 
+  //---------------------------------//
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -165,10 +246,10 @@ const AdminDashboard = () => {
                     Age
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Visit
+                    Condition
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Condition
+                    Treatment
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -188,19 +269,28 @@ const AdminDashboard = () => {
                       {patient.age}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.lastVisit}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {patient.condition}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.treatment || "N/A"}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-[#1e5631] hover:text-[#0d401d] mr-3">
+                      <button
+                        className="text-[#1e5631] hover:text-[#0d401d] mr-3"
+                        onClick={() => setViewingPatient(patient.id)}
+                      >
                         View
                       </button>
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">
+                      <button
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        onClick={() => setEditingPatient(patient)}
+                      >
                         Edit
                       </button>
-                      <button className="text-red-600 hover:text-red-900">
+                      <button
+                        className="text-red-600 hover:text-red-900"
+                        onClick={() => setDeletingPatient(patient.id)}
+                      >
                         Delete
                       </button>
                     </td>
@@ -210,7 +300,10 @@ const AdminDashboard = () => {
             </table>
           </div>
           <div className="bg-gray-50 px-6 py-3 border-t flex items-center justify-between">
-            <button className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]">
+            <button
+              className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
+              onClick={() => setAddingPatient(true)}
+            >
               Add New Patient
             </button>
             <div className="flex items-center">
@@ -228,6 +321,31 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+      {viewingPatient && (
+        <ViewPatientDetails
+          recordId={viewingPatient}
+          onClose={() => setViewingPatient(null)}
+        />
+      )}
+      {editingPatient && (
+        <EditPatientPopup
+          patient={editingPatient}
+          onClose={() => setEditingPatient(null)}
+          onSave={handleEditSave}
+        />
+      )}
+      {deletingPatient && (
+        <DeleteWarning
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
+      )}
+      {addingPatient && (
+        <AddPatientPopup
+          onClose={() => setAddingPatient(false)}
+          onSave={handleAddPatientSave}
+        />
       )}
     </div>
   );

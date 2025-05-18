@@ -11,13 +11,7 @@ const DoctorDashboard = () => {
     completedAppointments: 0
   });
 
-  const [patients, setPatients] = useState([
-    { id: 1, name: "John Doe", age: 45, lastVisit: "2023-04-15", condition: "Hypertension" },
-    { id: 2, name: "Jane Smith", age: 32, lastVisit: "2023-04-12", condition: "Diabetes" },
-    { id: 3, name: "Mike Johnson", age: 28, lastVisit: "2023-04-08", condition: "Asthma" },
-    { id: 4, name: "Sarah Williams", age: 56, lastVisit: "2023-04-05", condition: "Arthritis" },
-    { id: 5, name: "David Brown", age: 37, lastVisit: "2023-03-30", condition: "Anxiety" }
-  ]);
+  const [patients, setPatients] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -112,6 +106,25 @@ const DoctorDashboard = () => {
     fetchCompletedAppointments();
   }, []);
 
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("patient_records")
+          .select("record_id, patient_id, diagnosis, treatment")
+          .order("record_id", { ascending: true });
+
+        if (error) throw error;
+
+        setPatients(data);
+      } catch (error) {
+        console.error("Error fetching patient records:", error);
+      }
+    };
+
+    fetchPatients();
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -150,76 +163,38 @@ const DoctorDashboard = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
+                    Record ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient Name
+                    Patient ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Age
+                    Diagnosis
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Visit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Condition
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    Treatment
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {patients.map(patient => (
-                  <tr key={patient.id} className="hover:bg-gray-50">
+                  <tr key={patient.record_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {patient.id}
+                      {patient.record_id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {patient.name}
+                      {patient.patient_id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.age}
+                      {patient.diagnosis}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.lastVisit}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.condition}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-[#1e5631] hover:text-[#0d401d] mr-3">
-                        View
-                      </button>
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">
-                        Edit
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        Delete
-                      </button>
+                      {patient.treatment}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-          <div className="bg-gray-50 px-6 py-3 border-t flex items-center justify-between">
-            <button className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]">
-              Add New Patient
-            </button>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-700 mr-4">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of <span className="font-medium">{stats.totalPatients}</span> patients
-              </span>
-              <div className="flex">
-                <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-l">
-                  Previous
-                </button>
-                <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-r ml-px">
-                  Next
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
