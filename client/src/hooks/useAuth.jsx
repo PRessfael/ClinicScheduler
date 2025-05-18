@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
 
           if (error) throw error;
 
-          setUser({ username: userData.username, user_type: userData.user_type });
+          setUser({ id: session.user.id, username: userData.username, user_type: userData.user_type });
         }
       } catch (error) {
         console.error("Error checking session:", error);
