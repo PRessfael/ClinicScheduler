@@ -7,9 +7,9 @@ const Auth = ({ type = "login" }) => {
   const { login, register } = useAuth();
   const [formData, setFormData] = useState({
     username: "",
-    email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    email: ""
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,55 +30,71 @@ const Auth = ({ type = "login" }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const errors = {};
-    
+
     if (!formData.username.trim()) {
       errors.username = "Username is required";
     }
-    
+
+    if (!formData.password) {
+      errors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
+
     if (!isLogin && !formData.email.trim()) {
       errors.email = "Email is required";
     } else if (
-      !isLogin && 
+      !isLogin &&
       !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(formData.email)
     ) {
       errors.email = "Invalid email address";
     }
-    
-    if (!formData.password) {
-      errors.password = "Password is required";
-    } else if (!isLogin && formData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
-    }
-    
-    if (!isLogin && formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
-    }
-    
+
     setFormErrors(errors);
-    
-    if (Object.keys(errors).length === 0) {
-      setIsSubmitting(true);
-      try {
-        if (isLogin) {
-          // Handle login
-          const result = await login(formData.username, formData.password);
-          if (!result.success) {
-            setFormErrors({ general: result.error || "Login failed" });
-          }
+
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (isLogin) {
+        const { success, error, user_type } = await login(formData.username, formData.password);
+        if (!success) {
+          setFormErrors({ general: error });
         } else {
-          // Handle registration
-          const result = await register(formData.username, formData.password);
-          if (!result.success) {
-            setFormErrors({ general: result.error || "Registration failed" });
+          if (user_type === "admin") {
+            setLocation("/admin/dashboard");
+          } else if (user_type === "doctor") {
+            setLocation("/doctor/dashboard");
+          } else {
+            setLocation("/user/dashboard");
           }
         }
-      } catch (error) {
-        setFormErrors({ general: error.message || "An error occurred" });
-      } finally {
-        setIsSubmitting(false);
+      } else {
+        const user_type = formData.username.toLowerCase().includes("admin")
+          ? "admin"
+          : "user";
+        const { success, error } = await register(
+          formData.email,
+          formData.password,
+          user_type,
+          formData.username
+        );
+        if (!success) {
+          setFormErrors({ general: error });
+        } else {
+          setLocation("/dashboard");
+        }
       }
+    } catch (error) {
+      console.error("Auth error:", error);
+      setFormErrors({ general: "An unexpected error occurred." });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -97,7 +113,7 @@ const Auth = ({ type = "login" }) => {
             )}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
+                Username or Email
               </label>
               <input
                 id="username"
@@ -113,27 +129,6 @@ const Auth = ({ type = "login" }) => {
                 <p className="mt-1 text-sm text-red-500">{formErrors.username}</p>
               )}
             </div>
-
-            {!isLogin && (
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  className={`mt-1 block w-full px-3 py-2 border ${
-                    formErrors.email ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
-                )}
-              </div>
-            )}
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
@@ -156,6 +151,25 @@ const Auth = ({ type = "login" }) => {
 
             {!isLogin && (
               <>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    className={`mt-1 block w-full px-3 py-2 border ${
+                      formErrors.email ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                  )}
+                </div>
+
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                     Confirm Password

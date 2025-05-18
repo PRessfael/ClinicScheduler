@@ -4,7 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 // Protected route component that checks if the user is logged in
 export const ProtectedRoute = ({ component: Component, adminOnly = false, ...rest }) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -12,12 +12,12 @@ export const ProtectedRoute = ({ component: Component, adminOnly = false, ...res
       if (!user) {
         // Not logged in, redirect to login
         navigate("/login");
-      } else if (adminOnly && !isAdmin()) {
+      } else if (adminOnly && user.user_type !== "admin") {
         // Not an admin, but trying to access admin route
         navigate("/dashboard");
       }
     }
-  }, [user, loading, adminOnly, navigate, isAdmin]);
+  }, [user, loading, adminOnly, navigate]);
 
   // Show loading spinner while checking auth
   if (loading) {
@@ -29,7 +29,7 @@ export const ProtectedRoute = ({ component: Component, adminOnly = false, ...res
   }
 
   // Only render the component if auth check passed
-  if (!user || (adminOnly && !isAdmin())) {
+  if (!user || (adminOnly && user.user_type !== "admin")) {
     return null;
   }
 

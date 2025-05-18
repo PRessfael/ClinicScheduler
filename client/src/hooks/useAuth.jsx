@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from "react";
+import { supabase } from "../lib/supabase"; // Import Supabase client
 
 // Create context
 const AuthContext = createContext(null);
@@ -8,37 +9,78 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // On component mount, try to retrieve user from localStorage
+  // On component mount, check for an active session
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: userData, error } = await supabase
+            .from("users")
+            .select("username, user_type")
+            .eq("email", session.user.email)
+            .single();
+
+          if (error) throw error;
+
+          setUser({ id: session.user.id, username: userData.username, user_type: userData.user_type });
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        checkSession();
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
   // Login function
-  const login = async (username, password) => {
+  const login = async (identifier, password) => {
     try {
-      // In a real app, this would make a request to a server API
-      // For this prototype, we'll simulate a successful login with a mock user
-      
-      // Find the user by username (would be a server call in a real app)
-      const mockedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const foundUser = mockedUsers.find(u => u.username === username);
-      
-      if (!foundUser || foundUser.password !== password) {
-        return { success: false, error: "Invalid username or password" };
+      if (!identifier || !password) {
+        console.error("Login error: Missing identifier or password");
+        throw new Error("Username/Email and password are required");
       }
-      
-      // Remove password before storing in state/localStorage
-      const { password: _, ...userWithoutPassword } = foundUser;
-      
-      // Set the user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-      
-      return { success: true };
+
+      console.log("Attempting to fetch user by identifier (username or email):", identifier);
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("email, password, user_type")
+        .or(`username.eq.${identifier},email.eq.${identifier}`)
+        .single();
+
+      if (userError) {
+        console.error("Login error: User not found or invalid identifier:", userError);
+        throw new Error("Invalid username/email or password");
+      }
+
+      console.log("User data fetched successfully:", userData);
+      console.log("Attempting to authenticate with Supabase using email:", userData.email);
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password,
+      });
+
+      if (authError) {
+        console.error("Login error: Authentication failed:", authError);
+        throw new Error("Invalid username/email or password");
+      }
+
+      console.log("Authentication successful. Setting user state.");
+      setUser({ username: identifier, user_type: userData.user_type });
+      return { success: true, user_type: userData.user_type };
     } catch (error) {
       console.error("Login error:", error);
       return { success: false, error: error.message };
@@ -46,39 +88,33 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register function
-  const register = async (username, password) => {
+  const register = async (email, password, user_type, username) => {
     try {
-      // In a real app, this would make a request to a server API
-      // For this prototype, we'll simulate user registration with localStorage
-      
-      // Get existing users or create empty array
-      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      
-      // Check if username already exists
-      if (existingUsers.some(user => user.username === username)) {
-        return { success: false, error: "Username already exists" };
+      console.log("Attempting to register user with email:", email);
+      const { data: session, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        console.error("Registration error: Supabase auth sign-up failed:", error);
+        throw error;
       }
-      
-      // Determine role based on username - if it contains "admin", assign admin role
-      const role = username.toLowerCase().includes("admin") ? "admin" : "user";
-      
-      // Create the new user
-      const newUser = {
-        id: Date.now(), // simple ID generation
+
+      console.log("Supabase auth sign-up successful. Inserting user into 'users' table:", {
+        id: session.user.id,
+        email,
+        password,
+        user_type,
         username,
-        password, // In a real app, NEVER store plain text passwords
-        role
-      };
-      
-      // Add to "database"
-      existingUsers.push(newUser);
-      localStorage.setItem("users", JSON.stringify(existingUsers));
-      
-      // Login the user
-      const { password: _, ...userWithoutPassword } = newUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-      
+      });
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert({ id: session.user.id, email, password, user_type, username });
+
+      if (insertError) {
+        console.error("Registration error: Failed to insert user into 'users' table:", insertError);
+        throw insertError;
+      }
+
+      console.log("User successfully registered and inserted into 'users' table.");
+      setUser({ ...session.user, user_type, username });
       return { success: true };
     } catch (error) {
       console.error("Registration error:", error);
@@ -87,15 +123,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem("user");
   };
 
   // Check if user is an admin
-  const isAdmin = () => {
-    return user?.role === "admin";
-  };
+  const isAdmin = () => user?.user_type === "admin";
+
+  // Check if user is a doctor
+  const isDoctor = () => user?.user_type === "doctor";
+
+  // Check if user is a regular user
+  const isUser = () => user?.user_type === "user";
 
   const authContextValue = {
     user,
@@ -103,7 +143,9 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    isAdmin
+    isAdmin,
+    isDoctor,
+    isUser
   };
 
   return (

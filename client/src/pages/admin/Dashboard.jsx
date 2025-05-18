@@ -23,7 +23,7 @@ const AdminDashboard = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
         <div className="bg-[#1e5631] text-white px-4 py-2 rounded-lg">
-          Welcome, {user?.username || "Admin"}
+          Welcome, {user?.username || "Admin"} ({user?.user_type})
         </div>
       </div>
 
@@ -48,87 +48,89 @@ const AdminDashboard = () => {
       </div>
 
       {/* Patient Records Section */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold text-gray-800">Patient Records</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Age
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Visit
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Condition
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {patients.map(patient => (
-                <tr key={patient.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {patient.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {patient.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.age}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.lastVisit}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.condition}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-[#1e5631] hover:text-[#0d401d] mr-3">
-                      View
-                    </button>
-                    <button className="text-blue-600 hover:text-blue-900 mr-3">
-                      Edit
-                    </button>
-                    <button className="text-red-600 hover:text-red-900">
-                      Delete
-                    </button>
-                  </td>
+      {user?.user_type === "admin" && (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b">
+            <h2 className="text-xl font-semibold text-gray-800">Patient Records</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Age
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Visit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Condition
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="bg-gray-50 px-6 py-3 border-t flex items-center justify-between">
-          <button className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]">
-            Add New Patient
-          </button>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-700 mr-4">
-              Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of <span className="font-medium">{stats.totalPatients}</span> patients
-            </span>
-            <div className="flex">
-              <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-l">
-                Previous
-              </button>
-              <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-r ml-px">
-                Next
-              </button>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {patients.map(patient => (
+                  <tr key={patient.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {patient.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {patient.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.age}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.lastVisit}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.condition}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button className="text-[#1e5631] hover:text-[#0d401d] mr-3">
+                        View
+                      </button>
+                      <button className="text-blue-600 hover:text-blue-900 mr-3">
+                        Edit
+                      </button>
+                      <button className="text-red-600 hover:text-red-900">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="bg-gray-50 px-6 py-3 border-t flex items-center justify-between">
+            <button className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]">
+              Add New Patient
+            </button>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-700 mr-4">
+                Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of <span className="font-medium">{stats.totalPatients}</span> patients
+              </span>
+              <div className="flex">
+                <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-l">
+                  Previous
+                </button>
+                <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-r ml-px">
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

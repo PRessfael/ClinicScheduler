@@ -10,7 +10,7 @@ const AppointmentForm = ({
   setProvider,
   reason,
   setReason,
-  formErrors,
+  formErrors = {}, // Default value to prevent undefined errors
   submitAppointment
 }) => {
   const handleSubmit = (e) => {
