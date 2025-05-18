@@ -13,27 +13,29 @@ const UserDashboard = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Fetch user's appointments
-        const { data: appointmentsData, error: appointmentsError } = await supabase
-          .from('appointments')
-          .select('*, doctor:users(username)')
-          .eq('patient_id', user.id)
-          .order('appointment_date', { ascending: true });
+        if (user?.user_type === "user") {
+          // Fetch user's appointments
+          const { data: appointmentsData, error: appointmentsError } = await supabase
+            .from("appointments")
+            .select("*, doctor:users(username)")
+            .eq("patient_id", user.id)
+            .order("appointment_date", { ascending: true });
 
-        if (appointmentsError) throw appointmentsError;
-        setAppointments(appointmentsData);
+          if (appointmentsError) throw appointmentsError;
+          setAppointments(appointmentsData);
 
-        // Fetch user's medical records
-        const { data: recordsData, error: recordsError } = await supabase
-          .from('records')
-          .select('*')
-          .eq('patient_id', user.id)
-          .order('created_at', { ascending: false });
+          // Fetch user's medical records
+          const { data: recordsData, error: recordsError } = await supabase
+            .from("records")
+            .select("*")
+            .eq("patient_id", user.id)
+            .order("created_at", { ascending: false });
 
-        if (recordsError) throw recordsError;
-        setRecords(recordsData);
+          if (recordsError) throw recordsError;
+          setRecords(recordsData);
+        }
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error("Error fetching user data:", error);
       } finally {
         setLoading(false);
       }

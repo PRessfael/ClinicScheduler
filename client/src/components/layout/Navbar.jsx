@@ -21,13 +21,16 @@ const Navbar = () => {
   if (user) {
     // Add dashboard link for all authenticated users
     navLinks.push({ href: "/dashboard", label: "Dashboard" });
-    
-    if (isAdmin()) {
+
+    if (user.user_type === "admin") {
       // Admin-specific links
       navLinks.push({ href: "/records", label: "Patient Records" });
+    } else if (user.user_type === "doctor") {
+      // Doctor-specific links
+      navLinks.push({ href: "/appointments", label: "Appointments" });
     } else {
       // Regular user links
-      navLinks.push({ href: "/appointments", label: "Appointments" });
+      navLinks.push({ href: "/appointments", label: "My Appointments" });
     }
   }
 
