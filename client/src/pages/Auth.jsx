@@ -113,7 +113,7 @@ const Auth = ({ type = "login" }) => {
             )}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
+                Username or Email
               </label>
               <input
                 id="username"

@@ -47,23 +47,23 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (username, password) => {
+  const login = async (identifier, password) => {
     try {
-      if (!username || !password) {
-        console.error("Login error: Missing username or password");
-        throw new Error("Username and password are required");
+      if (!identifier || !password) {
+        console.error("Login error: Missing identifier or password");
+        throw new Error("Username/Email and password are required");
       }
 
-      console.log("Attempting to fetch user by username:", username);
+      console.log("Attempting to fetch user by identifier (username or email):", identifier);
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("email, password, user_type")
-        .eq("username", username)
+        .or(`username.eq.${identifier},email.eq.${identifier}`)
         .single();
 
       if (userError) {
-        console.error("Login error: User not found or invalid username:", userError);
-        throw new Error("Invalid username or password");
+        console.error("Login error: User not found or invalid identifier:", userError);
+        throw new Error("Invalid username/email or password");
       }
 
       console.log("User data fetched successfully:", userData);
@@ -75,11 +75,11 @@ export const AuthProvider = ({ children }) => {
 
       if (authError) {
         console.error("Login error: Authentication failed:", authError);
-        throw new Error("Invalid username or password");
+        throw new Error("Invalid username/email or password");
       }
 
       console.log("Authentication successful. Setting user state.");
-      setUser({ username, user_type: userData.user_type });
+      setUser({ username: identifier, user_type: userData.user_type });
       return { success: true, user_type: userData.user_type };
     } catch (error) {
       console.error("Login error:", error);
