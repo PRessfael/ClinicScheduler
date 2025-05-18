@@ -8,7 +8,8 @@ const Auth = ({ type = "login" }) => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    email: ""
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +39,17 @@ const Auth = ({ type = "login" }) => {
 
     if (!formData.password) {
       errors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
+
+    if (!isLogin && !formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (
+      !isLogin &&
+      !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(formData.email)
+    ) {
+      errors.email = "Invalid email address";
     }
 
     setFormErrors(errors);
@@ -67,9 +79,10 @@ const Auth = ({ type = "login" }) => {
           ? "admin"
           : "user";
         const { success, error } = await register(
-          formData.username,
+          formData.email,
           formData.password,
-          user_type
+          user_type,
+          formData.username
         );
         if (!success) {
           setFormErrors({ general: error });
@@ -138,6 +151,25 @@ const Auth = ({ type = "login" }) => {
 
             {!isLogin && (
               <>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    className={`mt-1 block w-full px-3 py-2 border ${
+                      formErrors.email ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                  )}
+                </div>
+
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                     Confirm Password

@@ -12,19 +12,24 @@ export const AuthProvider = ({ children }) => {
   // On component mount, check for an active session
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select("*, user_type")
-          .eq("id", session.user.id)
-          .single();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: userData, error } = await supabase
+            .from("users")
+            .select("username, user_type")
+            .eq("email", session.user.email)
+            .single();
 
-        if (!error) {
-          setUser({ ...session.user, user_type: userData.user_type });
+          if (error) throw error;
+
+          setUser({ username: userData.username, user_type: userData.user_type });
         }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkSession();
@@ -32,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        setUser(session.user);
+        checkSession();
       } else {
         setUser(null);
       }
@@ -45,27 +50,35 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       if (!username || !password) {
+        console.error("Login error: Missing username or password");
         throw new Error("Username and password are required");
       }
 
-      // Fetch user by username
+      console.log("Attempting to fetch user by username:", username);
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("email, password, user_type")
         .eq("username", username)
         .single();
 
-      if (userError) throw new Error("Invalid username or password");
+      if (userError) {
+        console.error("Login error: User not found or invalid username:", userError);
+        throw new Error("Invalid username or password");
+      }
 
-      // Authenticate with Supabase using the email and password
+      console.log("User data fetched successfully:", userData);
+      console.log("Attempting to authenticate with Supabase using email:", userData.email);
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: userData.email,
         password,
       });
 
-      if (authError) throw new Error("Invalid username or password");
+      if (authError) {
+        console.error("Login error: Authentication failed:", authError);
+        throw new Error("Invalid username or password");
+      }
 
-      // Set user in state
+      console.log("Authentication successful. Setting user state.");
       setUser({ username, user_type: userData.user_type });
       return { success: true, user_type: userData.user_type };
     } catch (error) {
@@ -75,18 +88,33 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register function
-  const register = async (email, password, user_type) => {
+  const register = async (email, password, user_type, username) => {
     try {
+      console.log("Attempting to register user with email:", email);
       const { data: session, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+      if (error) {
+        console.error("Registration error: Supabase auth sign-up failed:", error);
+        throw error;
+      }
 
+      console.log("Supabase auth sign-up successful. Inserting user into 'users' table:", {
+        id: session.user.id,
+        email,
+        password,
+        user_type,
+        username,
+      });
       const { error: insertError } = await supabase
         .from("users")
-        .insert({ id: session.user.id, email, user_type });
+        .insert({ id: session.user.id, email, password, user_type, username });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Registration error: Failed to insert user into 'users' table:", insertError);
+        throw insertError;
+      }
 
-      setUser({ ...session.user, user_type });
+      console.log("User successfully registered and inserted into 'users' table.");
+      setUser({ ...session.user, user_type, username });
       return { success: true };
     } catch (error) {
       console.error("Registration error:", error);
