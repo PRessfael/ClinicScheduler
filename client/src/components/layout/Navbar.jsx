@@ -26,8 +26,13 @@ const Navbar = () => {
       // Admin-specific links
       navLinks.push({ href: "/records", label: "Patient Records" });
     } else if (user.user_type === "doctor") {
-      // Doctor-specific links
-      navLinks.push({ href: "/appointments", label: "Appointments" });
+      // Add Home and Contact Us links back to the doctor navigation bar
+      navLinks = [
+        { href: "/", label: "Home" },
+        { href: "/contact", label: "Contact Us" },
+        { href: "/doctor/dashboard", label: "Dashboard" },
+        { href: "/records", label: "Patient Records" },
+      ];
     } else {
       // Regular user links
       navLinks.push({ href: "/appointments", label: "My Appointments" });

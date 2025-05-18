@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../lib/supabase";
 
-const AdminDashboard = () => {
+const DoctorDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalPatients: 0,
@@ -10,7 +10,7 @@ const AdminDashboard = () => {
     pendingAppointments: 0,
     completedAppointments: 0
   });
-  
+
   const [patients, setPatients] = useState([
     { id: 1, name: "John Doe", age: 45, lastVisit: "2023-04-15", condition: "Hypertension" },
     { id: 2, name: "Jane Smith", age: 32, lastVisit: "2023-04-12", condition: "Diabetes" },
@@ -18,7 +18,7 @@ const AdminDashboard = () => {
     { id: 4, name: "Sarah Williams", age: 56, lastVisit: "2023-04-05", condition: "Arthritis" },
     { id: 5, name: "David Brown", age: 37, lastVisit: "2023-03-30", condition: "Anxiety" }
   ]);
-//fetch total patients
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -39,7 +39,7 @@ const AdminDashboard = () => {
 
     fetchStats();
   }, []);
-//fetch total appointments
+
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
@@ -48,7 +48,6 @@ const AdminDashboard = () => {
           .select("appointment_id", { count: "exact" });
 
         if (totalError) throw totalError;
-
         console.log("Total Appointments Query Result:", totalCount);
 
         const { count: pendingCount, error: pendingError } = await supabase
@@ -56,7 +55,6 @@ const AdminDashboard = () => {
           .select("queue_id", { count: "exact" });
 
         if (pendingError) throw pendingError;
-
         console.log("Pending Appointments Query Result:", pendingCount);
 
         setStats(prevStats => ({
@@ -71,7 +69,6 @@ const AdminDashboard = () => {
     fetchAppointments();
   }, []);
 
-//fetch pending appointments
   useEffect(() => {
     const fetchPendingAppointments = async () => {
       try {
@@ -93,7 +90,6 @@ const AdminDashboard = () => {
     fetchPendingAppointments();
   }, []);
 
-//fetch completed appointments
   useEffect(() => {
     const fetchCompletedAppointments = async () => {
       try {
@@ -119,13 +115,12 @@ const AdminDashboard = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Doctor Dashboard</h1>
         <div className="bg-[#1e5631] text-white px-4 py-2 rounded-lg">
-          Welcome, {user?.username || "Admin"} ({user?.user_type})
+          Welcome, {user?.username || "Doctor"} ({user?.user_type})
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-[#1e5631]">
           <h3 className="text-gray-500 text-sm font-semibold mb-1">TOTAL PATIENTS</h3>
@@ -145,7 +140,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Patient Records Section */}
       {(user?.user_type === "admin" || user?.user_type === "doctor") && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="bg-gray-50 px-6 py-4 border-b">
@@ -233,4 +227,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default DoctorDashboard;
