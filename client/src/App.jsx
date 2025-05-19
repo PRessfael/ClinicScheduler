@@ -12,8 +12,9 @@ import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import UserDashboard from "@/pages/user/Dashboard";
+import DoctorDashboard from "@/pages/doctor/Dashboard";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { UserRoute, AdminRoute } from "@/components/auth/ProtectedRoute";
+import { UserRoute, AdminRoute, ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 function Dashboard() {
   const { user, isAdmin } = useAuth();
@@ -50,11 +51,12 @@ function Router() {
           </Route>
           <Route path="/user/dashboard" component={UserDashboard} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
+          <Route path="/doctor/dashboard" component={DoctorDashboard} />
           <Route path="/appointments">
             <UserRoute component={Appointments} />
           </Route>
           <Route path="/records">
-            <AdminRoute component={Records} />
+            <ProtectedRoute component={Records} adminOnly={false} />
           </Route>
           <Route path="/contact" component={Contact} />
           <Route path="/login">

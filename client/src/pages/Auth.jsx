@@ -66,13 +66,7 @@ const Auth = ({ type = "login" }) => {
         if (!success) {
           setFormErrors({ general: error });
         } else {
-          if (user_type === "admin") {
-            setLocation("/admin/dashboard");
-          } else if (user_type === "doctor") {
-            setLocation("/doctor/dashboard");
-          } else {
-            setLocation("/user/dashboard");
-          }
+          setLocation("/dashboard"); // Use consistent dashboard path for all users
         }
       } else {
         const user_type = formData.username.toLowerCase().includes("admin")

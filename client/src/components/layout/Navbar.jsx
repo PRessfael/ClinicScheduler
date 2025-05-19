@@ -26,18 +26,28 @@ const Navbar = () => {
       // Admin-specific links
       navLinks.push({ href: "/records", label: "Patient Records" });
     } else if (user.user_type === "doctor") {
-      // Doctor-specific links
-      navLinks.push({ href: "/appointments", label: "Appointments" });
+      // Add Home and Contact Us links back to the doctor navigation bar
+      navLinks = [
+        { href: "/", label: "Home" },
+        { href: "/contact", label: "Contact Us" },
+        { href: "/doctor/dashboard", label: "Dashboard" },
+        { href: "/records", label: "Patient Records" },
+      ];
     } else {
       // Regular user links
       navLinks.push({ href: "/appointments", label: "My Appointments" });
     }
   }
-
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
-    logout();
-    // No need to redirect, AuthProvider will handle it
+    console.log("Starting logout process...");
+    try {
+      await logout();
+      console.log("Logout successful");
+      setLocation("/"); // Redirect to home page after successful logout
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (

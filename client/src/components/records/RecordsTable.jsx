@@ -122,9 +122,9 @@ const RecordsTable = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.type.className}`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.type?.className || ''}`}
                     >
-                      {record.type.label}
+                      {record.type?.label || 'Unknown'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

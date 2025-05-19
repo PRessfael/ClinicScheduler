@@ -12,8 +12,8 @@ export const ProtectedRoute = ({ component: Component, adminOnly = false, ...res
       if (!user) {
         // Not logged in, redirect to login
         navigate("/login");
-      } else if (adminOnly && user.user_type !== "admin") {
-        // Not an admin, but trying to access admin route
+      } else if (adminOnly && user.user_type !== "admin" && user.user_type !== "doctor") {
+        // Not an admin or doctor, but trying to access admin/doctor route
         navigate("/dashboard");
       }
     }

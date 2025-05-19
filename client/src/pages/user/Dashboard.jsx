@@ -26,10 +26,10 @@ const UserDashboard = () => {
 
           // Fetch user's medical records
           const { data: recordsData, error: recordsError } = await supabase
-            .from("records")
-            .select("*")
+            .from("patient_records")
+            .select("record_id, diagnosis, treatment")
             .eq("patient_id", user.id)
-            .order("created_at", { ascending: false });
+            .order("record_id", { ascending: true });
 
           if (recordsError) throw recordsError;
           setRecords(recordsData);
