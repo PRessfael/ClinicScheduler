@@ -1,11 +1,11 @@
 import React from "react";
 
-const DeleteWarning = ({ onConfirm, onCancel }) => {
+const DeleteWarning = ({ message, onCancel, onConfirm }) => {
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-        <h2 className="text-xl font-semibold mb-4 text-red-600">Confirm Deletion</h2>
-        <p className="text-gray-700 mb-6">Are you sure you want to PERMANENTLY delete this record? This action cannot be undone.</p>
+        <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+        <p className="text-gray-700 mb-6">{message}</p>
         <div className="flex justify-end">
           <button
             onClick={onCancel}

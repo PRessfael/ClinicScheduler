@@ -26,6 +26,7 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
       const { error: recordError } = await supabase
         .from("patient_records")
         .update({
+          age: formData.age,
           diagnosis: formData.condition,
           treatment: formData.treatment,
         })

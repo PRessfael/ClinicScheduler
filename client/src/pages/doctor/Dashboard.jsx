@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../lib/supabase";
+import EditPatientPopup from "../../components/ui/EditPatientPopup";
+import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
+import DeleteWarning from "../../components/ui/DeleteWarning";
+import AddPatientPopup from "../../components/ui/AddPatientPopup";
 
 const DoctorDashboard = () => {
   const { user } = useAuth();
@@ -12,6 +16,54 @@ const DoctorDashboard = () => {
   });
 
   const [patients, setPatients] = useState([]);
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [viewingPatient, setViewingPatient] = useState(null);
+  const [deletingPatient, setDeletingPatient] = useState(null);
+  const [addingPatient, setAddingPatient] = useState(false);
+
+  const deletePatient = async (recordId) => {
+    if (!recordId) {
+      console.error("Invalid record ID provided for deletion.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("patient_records")
+        .delete()
+        .eq("record_id", recordId);
+
+      if (error) throw error;
+
+      setPatients((prevPatients) => prevPatients.filter((patient) => patient.record_id !== recordId));
+    } catch (error) {
+      console.error("Error deleting patient record:", error);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingPatient) {
+      await deletePatient(deletingPatient);
+      setDeletingPatient(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingPatient(null);
+  };
+
+  const handleEditSave = (updatedPatient) => {
+    setPatients((prevPatients) =>
+      prevPatients.map((patient) =>
+        patient.record_id === editingPatient.record_id ? { ...patient, ...updatedPatient } : patient
+      )
+    );
+    setEditingPatient(null);
+  };
+
+  const handleAddPatientSave = () => {
+    setAddingPatient(false);
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -155,8 +207,14 @@ const DoctorDashboard = () => {
 
       {(user?.user_type === "admin" || user?.user_type === "doctor") && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b">
+          <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-800">Patient Records</h2>
+            <button
+              className="bg-[#1e5631] text-white px-4 py-2 rounded-lg"
+              onClick={() => setAddingPatient(true)}
+            >
+              Add Patient
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -173,6 +231,9 @@ const DoctorDashboard = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Treatment
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -191,12 +252,58 @@ const DoctorDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {patient.treatment}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
+                      <button
+                        className="text-blue-500 hover:underline"
+                        onClick={() => setViewingPatient(patient.record_id)}
+                      >
+                        View
+                      </button>
+                      <button
+                        className="text-green-500 hover:underline"
+                        onClick={() => setEditingPatient(patient)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="text-red-500 hover:underline"
+                        onClick={() => setDeletingPatient(patient.record_id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+
+      {viewingPatient && (
+        <ViewPatientDetails
+          recordId={viewingPatient}
+          onClose={() => setViewingPatient(null)}
+        />
+      )}
+      {editingPatient && (
+        <EditPatientPopup
+          patient={editingPatient}
+          onClose={() => setEditingPatient(null)}
+          onSave={handleEditSave}
+        />
+      )}
+      {deletingPatient && (
+        <DeleteWarning
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
+      )}
+      {addingPatient && (
+        <AddPatientPopup
+          onClose={() => setAddingPatient(false)}
+          onSave={handleAddPatientSave}
+        />
       )}
     </div>
   );

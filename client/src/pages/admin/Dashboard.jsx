@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../lib/supabase";
 import EditPatientPopup from "../../components/ui/EditPatientPopup";
+import AddPatientPopup from "../../components/ui/AddPatientPopup.jsx";
 import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
 import DeleteWarning from "../../components/ui/DeleteWarning";
-import AddPatientPopup from "../../components/ui/AddPatientPopup";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -19,7 +19,7 @@ const AdminDashboard = () => {
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
-  const [addingPatient, setAddingPatient] = useState(false);
+  const [isAddPatientPopupOpen, setIsAddPatientPopupOpen] = useState(false);
 
   const deletePatient = async (recordId) => {
     if (!recordId) {
@@ -41,17 +41,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (deletingPatient) {
-      await deletePatient(deletingPatient);
-      setDeletingPatient(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeletingPatient(null);
-  };
-
   const handleEditSave = (updatedPatient) => {
     setPatients((prevPatients) =>
       prevPatients.map((patient) =>
@@ -61,40 +50,52 @@ const AdminDashboard = () => {
     setEditingPatient(null);
   };
 
+  const handleAddPatient = () => {
+    setIsAddPatientPopupOpen(true);
+  };
+
   const handleAddPatientSave = () => {
-    // Refresh patient list or perform any additional actions after saving
-    setAddingPatient(false);
+    setIsAddPatientPopupOpen(false);
+    // Re-fetch patients to include the newly added patient
+    fetchPatients();
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingPatient) {
+      await deletePatient(deletingPatient.id);
+      setDeletingPatient(null);
+    }
+  };
+
+  const fetchPatients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("patient_records")
+        .select(`
+          record_id,
+          diagnosis,
+          treatment,
+          patients(first_name, last_name, age)
+        `)
+        .order("record_id", { ascending: true });
+
+      if (error) throw error;
+
+      const formattedPatients = data.map(record => ({
+        id: record.record_id, // Use record_id here
+        name: `${record.patients.first_name} ${record.patients.last_name}`,
+        age: record.patients.age,
+        condition: record.diagnosis,
+        treatment: record.treatment
+      }));
+
+      setPatients(formattedPatients);
+    } catch (error) {
+      console.error("Error fetching patient records:", error);
+    }
   };
 
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("patient_records")
-          .select(`
-            record_id,
-            diagnosis,
-            treatment,
-            patients(first_name, last_name, age)
-          `)
-          .order("record_id", { ascending: true });
-
-        if (error) throw error;
-
-        const formattedPatients = data.map(record => ({
-          id: record.record_id, // Use record_id here
-          name: `${record.patients.first_name} ${record.patients.last_name}`,
-          age: record.patients.age,
-          condition: record.diagnosis,
-          treatment: record.treatment
-        }));
-
-        setPatients(formattedPatients);
-      } catch (error) {
-        console.error("Error fetching patient records:", error);
-      }
-    };
-
     fetchPatients();
   }, []);
   
@@ -277,7 +278,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         className="text-[#1e5631] hover:text-[#0d401d] mr-3"
-                        onClick={() => setViewingPatient(patient.id)}
+                        onClick={() => setViewingPatient(patient)}
                       >
                         View
                       </button>
@@ -289,7 +290,7 @@ const AdminDashboard = () => {
                       </button>
                       <button
                         className="text-red-600 hover:text-red-900"
-                        onClick={() => setDeletingPatient(patient.id)}
+                        onClick={() => setDeletingPatient(patient)}
                       >
                         Delete
                       </button>
@@ -302,7 +303,7 @@ const AdminDashboard = () => {
           <div className="bg-gray-50 px-6 py-3 border-t flex items-center justify-between">
             <button
               className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
-              onClick={() => setAddingPatient(true)}
+              onClick={handleAddPatient}
             >
               Add New Patient
             </button>
@@ -322,12 +323,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-      {viewingPatient && (
-        <ViewPatientDetails
-          recordId={viewingPatient}
-          onClose={() => setViewingPatient(null)}
-        />
-      )}
       {editingPatient && (
         <EditPatientPopup
           patient={editingPatient}
@@ -335,15 +330,22 @@ const AdminDashboard = () => {
           onSave={handleEditSave}
         />
       )}
-      {deletingPatient && (
-        <DeleteWarning
-          onConfirm={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
+      {viewingPatient && (
+        <ViewPatientDetails
+          patient={viewingPatient}
+          onClose={() => setViewingPatient(null)}
         />
       )}
-      {addingPatient && (
+      {deletingPatient && (
+        <DeleteWarning
+          message={`Are you sure you want to delete ${deletingPatient.name}?`}
+          onCancel={() => setDeletingPatient(null)}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
+      {isAddPatientPopupOpen && (
         <AddPatientPopup
-          onClose={() => setAddingPatient(false)}
+          onClose={() => setIsAddPatientPopupOpen(false)}
           onSave={handleAddPatientSave}
         />
       )}

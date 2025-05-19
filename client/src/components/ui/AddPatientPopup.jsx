@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
 const AddPatientPopup = ({ onClose, onSave }) => {
@@ -7,6 +7,39 @@ const AddPatientPopup = ({ onClose, onSave }) => {
     diagnosis: "",
     treatment: "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [patientOptions, setPatientOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (searchQuery.length < 3) {
+        setPatientOptions([]);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("patients")
+          .select("patient_id, first_name, last_name")
+          .or(
+            `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`
+          );
+
+        if (error) throw error;
+
+        const formattedOptions = data.map((patient) => ({
+          id: patient.patient_id,
+          name: `${patient.first_name} ${patient.last_name}`,
+        }));
+
+        setPatientOptions(formattedOptions);
+      } catch (error) {
+        console.error("Error fetching patient options:", error);
+      }
+    };
+
+    fetchPatients();
+  }, [searchQuery]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,14 +75,31 @@ const AddPatientPopup = ({ onClose, onSave }) => {
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
         <h2 className="text-xl font-semibold mb-4">Add New Patient</h2>
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Patient ID</label>
+          <label className="block text-sm font-medium text-gray-700">Patient</label>
           <input
             type="text"
-            name="patientId"
-            value={formData.patientId}
-            onChange={handleChange}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name"
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
+          {patientOptions.length > 0 && (
+            <ul className="border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto">
+              {patientOptions.map((option) => (
+                <li
+                  key={option.id}
+                  onClick={() => {
+                    setFormData((prevData) => ({ ...prevData, patientId: option.id }));
+                    setSearchQuery(option.name);
+                    setPatientOptions([]);
+                  }}
+                  className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                >
+                  {option.name}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700">Diagnosis</label>
