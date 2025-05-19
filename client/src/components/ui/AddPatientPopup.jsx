@@ -54,7 +54,6 @@ const AddPatientPopup = ({ onClose, onSave }) => {
       const { data, error } = await supabase
         .from("patient_records")
         .insert({
-          record_id: Math.random().toString(36).substr(2, 10), // Generate a random record_id
           patient_id: formData.patientId,
           diagnosis: formData.diagnosis,
           treatment: formData.treatment,
