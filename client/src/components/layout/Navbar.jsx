@@ -20,18 +20,16 @@ const Navbar = () => {
 
   if (user) {
     // Add dashboard link for all authenticated users
-    navLinks.push({ href: "/dashboard", label: "Dashboard" });
-
-    if (user.user_type === "admin") {
+    navLinks.push({ href: "/dashboard", label: "Dashboard" });    if (user.user_type === "admin") {
       // Admin-specific links
-      navLinks.push({ href: "/records", label: "Patient Records" });
+      navLinks.push({ href: "/appointment-dashboard", label: "Appointment Dashboard" });
     } else if (user.user_type === "doctor") {
       // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
         { href: "/contact", label: "Contact Us" },
         { href: "/doctor/dashboard", label: "Dashboard" },
-        { href: "/records", label: "Patient Records" },
+        { href: "/appointment-dashboard", label: "Appointment Dashboard" },
       ];
     } else {
       // Regular user links

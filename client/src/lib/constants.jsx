@@ -77,18 +77,16 @@ export const CLINIC_HOURS = [
 ];
 
 export const APPOINTMENT_TYPES = [
-  { value: "routine", label: "Routine Check-up" },
+  { value: "checkup", label: "Regular Check-up" },
+  { value: "followup", label: "Follow-up Visit" },
+  { value: "consultation", label: "Consultation" },
   { value: "urgent", label: "Urgent Care" },
-  { value: "vaccination", label: "Vaccination" },
-  { value: "counseling", label: "Mental Health Counseling" },
-  { value: "lab", label: "Laboratory Services" },
 ];
 
 export const PROVIDERS = [
   { value: "dr-smith", label: "Dr. Smith" },
-  { value: "dr-johnson", label: "Dr. Johnson" },
+  { value: "dr-jones", label: "Dr. Jones" },
   { value: "dr-williams", label: "Dr. Williams" },
-  { value: "nurse-davis", label: "Nurse Davis" },
 ];
 
 export const APPOINTMENT_GUIDELINES = [

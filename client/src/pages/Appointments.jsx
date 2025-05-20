@@ -17,8 +17,7 @@ const Appointments = () => {
     setReason,
     formErrors,
     getCalendarDays,
-    getAvailableTimeSlots,
-    submitAppointment
+    getAvailableTimeSlots
   } = useAppointments();
 
   return (
@@ -42,9 +41,7 @@ const Appointments = () => {
                   calendarDays={getCalendarDays()}
                   availableTimeSlots={getAvailableTimeSlots()}
                 />
-              </div>
-
-              {/* Appointment Form */}
+              </div>              {/* Appointment Form */}
               <div className="md:w-1/2 p-6">
                 <AppointmentForm
                   selectedDate={selectedDate}
@@ -56,7 +53,20 @@ const Appointments = () => {
                   reason={reason}
                   setReason={setReason}
                   formErrors={formErrors}
-                  submitAppointment={submitAppointment}
+                  onSuccess={() => {
+                    setSelectedTime("");
+                    setAppointmentType("");
+                    setProvider("");
+                    setReason("");
+                  }}
+                  formErrors={formErrors}
+                  onSuccess={() => {
+                    // Reset form fields after successful submission
+                    setSelectedTime("");
+                    setAppointmentType("");
+                    setProvider("");
+                    setReason("");
+                  }}
                 />
               </div>
             </div>
