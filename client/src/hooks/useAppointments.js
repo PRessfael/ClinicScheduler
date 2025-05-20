@@ -1,122 +1,85 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { supabase } from "../lib/supabase";
 
-export function useAppointments() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState(null);
-  const [appointmentType, setAppointmentType] = useState('');
-  const [provider, setProvider] = useState('');
-  const [reason, setReason] = useState('');
-  const [formErrors, setFormErrors] = useState({});
+export const useAppointments = () => {
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Days formatting for calendar display
-  const getDaysInMonth = (year, month) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
+  // ✅ Fetch appointments with optional filters
+  const fetchAppointments = async (filter = {}) => {
+    setLoading(true);
+    setError(null);
 
-  const getFirstDayOfMonth = (year, month) => {
-    return new Date(year, month, 1).getDay();
-  };
+    try {
+      const query = supabase
+        .from("appointments")
+        .select("*")
+        .order("date", { ascending: true })
+        .order("time", { ascending: true });
 
-  const getPreviousMonthDays = (year, month) => {
-    const firstDay = getFirstDayOfMonth(year, month);
-    const prevMonthDays = [];
-    
-    if (firstDay > 0) {
-      const daysInPrevMonth = getDaysInMonth(year, month - 1);
-      for (let i = 0; i < firstDay; i++) {
-        prevMonthDays.unshift(daysInPrevMonth - i);
-      }
+      if (filter.patient_id) query.eq("patient_id", filter.patient_id);
+      if (filter.doctor_id) query.eq("doctor_id", filter.doctor_id);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      setAppointments(data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    
-    return prevMonthDays;
   };
 
-  const getCurrentMonthDays = (year, month) => {
-    const daysInMonth = getDaysInMonth(year, month);
-    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  // ✅ Add new appointment (no need to pass appointment_id)
+  const addAppointment = async ({ patient_id, doctor_id, date, time, status }) => {
+    const { error } = await supabase.from("appointments").insert([
+      {
+        patient_id,
+        doctor_id,
+        date,
+        time,
+        status, // must be one of: 'pending', 'confirmed', 'cancelled', 'completed'
+      },
+    ]);
+
+    if (error) throw new Error(error.message);
+
+    await fetchAppointments(); // Optional: refresh data
   };
 
-  const getNextMonthDays = (year, month) => {
-    const firstDay = getFirstDayOfMonth(year, month);
-    const daysInMonth = getDaysInMonth(year, month);
-    const nextMonthDays = [];
-    
-    const totalCells = 42; // 6 rows of 7 days
-    const remainingCells = totalCells - (firstDay + daysInMonth);
-    
-    for (let i = 1; i <= remainingCells; i++) {
-      nextMonthDays.push(i);
-    }
-    
-    return nextMonthDays;
+  // ✅ Update appointment status
+  const updateStatus = async (appointment_id, newStatus) => {
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: newStatus })
+      .eq("appointment_id", appointment_id);
+
+    if (error) throw new Error(error.message);
+
+    await fetchAppointments();
   };
 
-  const getCalendarDays = () => {
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth();
-    
-    return {
-      previousMonth: getPreviousMonthDays(year, month),
-      currentMonth: getCurrentMonthDays(year, month),
-      nextMonth: getNextMonthDays(year, month),
-      year,
-      month
-    };
-  };
+  // ✅ Delete appointment
+  const deleteAppointment = async (appointment_id) => {
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("appointment_id", appointment_id);
 
-  // Available time slots for the selected date
-  const getAvailableTimeSlots = () => {
-    return [
-      { time: '9:00 AM', available: true },
-      { time: '10:00 AM', available: true },
-      { time: '11:00 AM', available: true },
-      { time: '1:00 PM', available: true },
-      { time: '2:00 PM', available: true },
-      { time: '3:00 PM', available: true },
-    ];
-  };
+    if (error) throw new Error(error.message);
 
-  // Form submission handler
-  const submitAppointment = () => {
-    const errors = {};
-    
-    if (!appointmentType) errors.appointmentType = 'Please select an appointment type';
-    if (!selectedDate) errors.date = 'Please select a date';
-    if (!selectedTime) errors.time = 'Please select a time';
-    if (!reason.trim()) errors.reason = 'Please provide a reason for your visit';
-    
-    setFormErrors(errors);
-    
-    if (Object.keys(errors).length === 0) {
-      // In a real app, we would submit to an API here
-      alert(`Appointment scheduled for ${selectedDate.toLocaleDateString()} at ${selectedTime}`);
-      
-      // Reset form
-      setAppointmentType('');
-      setProvider('');
-      setReason('');
-      setSelectedTime(null);
-      
-      return true;
-    }
-    
-    return false;
+    await fetchAppointments();
   };
 
   return {
-    selectedDate,
-    setSelectedDate,
-    selectedTime,
-    setSelectedTime,
-    appointmentType,
-    setAppointmentType,
-    provider,
-    setProvider,
-    reason,
-    setReason,
-    formErrors,
-    getCalendarDays,
-    getAvailableTimeSlots,
-    submitAppointment
+    appointments,
+    loading,
+    error,
+    fetchAppointments,
+    addAppointment,
+    updateStatus,
+    deleteAppointment,
   };
-}
+};
