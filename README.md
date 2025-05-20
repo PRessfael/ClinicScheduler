@@ -1,3 +1,5 @@
+May 20, 2025
+1. Added Appointment dashboard and routes in navigation bar in admin
 
 05/19/2023
 1. Added integration of Supabase Auth with the login and registration form
