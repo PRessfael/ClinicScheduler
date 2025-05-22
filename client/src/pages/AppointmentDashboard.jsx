@@ -11,47 +11,43 @@ const AppointmentDashboard = () => {
   }, []);
 
   const fetchQueuedAppointments = async () => {
-    // Placeholder data for testing
-    const mockData = [
-      {
-        appointment_id: 1,
-        date: '2025-05-21',
-        time: '09:00',
-        status: 'pending',
-        doctors: { name: 'Dr. Smith' },
-        appointment_queue: {
-          queue_id: 101,
-          reason: 'Regular checkup'
-        }
-      },
-      {
-        appointment_id: 2,
-        date: '2025-05-21',
-        time: '10:30',
-        status: 'pending',
-        doctors: { name: 'Dr. Jones' },
-        appointment_queue: {
-          queue_id: 102,
-          reason: 'Follow-up visit'
-        }
-      },
-      {
-        appointment_id: 3,
-        date: '2025-05-22',
-        time: '14:00',
-        status: 'pending',
-        doctors: { name: 'Dr. Williams' },
-        appointment_queue: {
-          queue_id: 103,
-          reason: 'Consultation for headache'
-        }
-      }
-    ];
-
     try {
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setQueuedAppointments(mockData);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('appointment_queue')
+        .select(`
+          queue_id,
+          appointment_date,
+          status,
+          reason,
+          patient_id,
+          appointment:appointments (
+            appointment_id,
+            doctor:doctor_id (
+              username
+            )
+          )
+        `)
+        .eq('status', 'waiting')
+        .order('appointment_date', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedData = data.map(queue => ({
+        appointment_id: queue.appointment?.appointment_id,
+        date: new Date(queue.appointment_date).toISOString().split('T')[0],
+        time: new Date(queue.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: queue.status,
+        doctors: { name: queue.appointment?.doctor?.username || 'Not assigned' },
+        appointment_queue: {
+          queue_id: queue.queue_id,
+          reason: queue.reason
+        }
+      }));
+
+      setQueuedAppointments(formattedData);
     } catch (error) {
       console.error('Error fetching queued appointments:', error.message);
     } finally {

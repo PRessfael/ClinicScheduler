@@ -17,14 +17,14 @@ const Navbar = () => {
     { href: "/", label: "Home" },
     { href: "/contact", label: "Contact Us" },
   ];
-
   if (user) {
-    // Add dashboard link for all authenticated users
-    navLinks.push({ href: "/dashboard", label: "Dashboard" });    if (user.user_type === "admin") {
-      // Admin-specific links
-      navLinks.push({ href: "/appointment-dashboard", label: "Appointment Dashboard" });
+    // Add dashboard link based on user type
+    if (user.user_type === "admin") {
+      navLinks.push(
+        { href: "/admin/dashboard", label: "Dashboard" },
+        { href: "/appointment-dashboard", label: "Appointment Dashboard" }
+      );
     } else if (user.user_type === "doctor") {
-      // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
         { href: "/contact", label: "Contact Us" },
@@ -33,16 +33,18 @@ const Navbar = () => {
       ];
     } else {
       // Regular user links
-      navLinks.push({ href: "/appointments", label: "My Appointments" });
+      navLinks.push(
+        { href: "/user/dashboard", label: "Dashboard" },
+        { href: "/appointments", label: "My Appointments" }
+      );
     }
-  }
-  const handleLogout = async (e) => {
+  }  const handleLogout = async (e) => {
     e.preventDefault();
     console.log("Starting logout process...");
     try {
       await logout();
       console.log("Logout successful");
-      setLocation("/"); // Redirect to home page after successful logout
+      setLocation("/");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -62,7 +64,7 @@ const Navbar = () => {
               key={link.href}
               href={link.href}
               className={`text-white${
-                location !== link.href ? "/90 hover:text-white" : ""
+                location !== link.href ? "/90 hover:text-white text-white" : ""
               } font-medium px-2 py-1 ${
                 location === link.href
                   ? "border-b-2 border-white"

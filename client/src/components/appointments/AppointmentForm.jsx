@@ -20,8 +20,7 @@ const AppointmentForm = ({
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submitAppointment = async () => {
-    if (!user || !selectedDate || !selectedTime || !appointmentType || !reason) {
+    if (!selectedDate || !selectedTime || !appointmentType || !reason) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -32,46 +31,73 @@ const AppointmentForm = ({
 
     setIsSubmitting(true);
     try {
-      const { data: appointmentData, error: appointmentError } = await supabase
-        .from('appointments')
-        .insert([
-          {
-            patient_id: user.id,
-            doctor_id: provider || null,
-            date: selectedDate,
-            time: selectedTime,
-            status: 'pending'
-          }
-        ])
+      // Create appointment date by combining the selected date and time
+      const [hours, minutes] = selectedTime.match(/(\d+):(\d+)/).slice(1);
+      const appointmentDateTime = new Date(selectedDate);
+      appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('You must be logged in to make an appointment');
+      }
+
+      // Get the patient record for the current user
+      const { data: patientData, error: patientError } = await supabase
+        .from('patients')
+        .select('patient_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (patientError) {
+        throw new Error('Could not find your patient record. Please contact support.');
+      }
+
+      // Insert into appointment queue
+      const { data: queueData, error: queueError } = await supabase
+        .from('appointment_queue')
+        .insert({
+          appointment_date: appointmentDateTime.toISOString(),
+          patient_id: patientData.patient_id,
+          status: 'waiting',
+          reason: reason
+        })
         .select()
         .single();
 
-      if (appointmentError) throw appointmentError;
-
-      const { error: queueError } = await supabase
-        .from('appointment_queue')
-        .insert([
-          {
-            appointment_id: appointmentData.appointment_id,
-            reason: reason
-          }
-        ]);
-
       if (queueError) throw queueError;
 
+      // Insert into appointments table
+      const { error: appointmentError } = await supabase
+        .from('appointments')
+        .insert({
+          appointment_date: appointmentDateTime.toISOString(),
+          appointment_type: appointmentType,
+          doctor_id: provider || null,
+          patient_id: patientData.patient_id,
+          queue_id: queueData.queue_id,
+          status: 'pending'
+        });
+
+      if (appointmentError) throw appointmentError;      // Success! Reset form and notify user
       toast({
-        title: "Appointment Scheduled",
+        title: "Success",
         description: "Your appointment has been successfully scheduled",
-        variant: "default"
       });
+
+      // Reset form
+      setAppointmentType('');
+      setProvider('');
+      setReason('');
+      setSelectedTime('');
       
       if (onSuccess) onSuccess();
-      
+
     } catch (error) {
+      console.error('Error submitting appointment:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to schedule appointment"
+        description: error.message || "Failed to schedule appointment. Please try again."
       });
     } finally {
       setIsSubmitting(false);

@@ -18,13 +18,19 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { UserRoute, AdminRoute, ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 function Dashboard() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isDoctor } = useAuth();
   
   if (!user) {
     return <Redirect to="/login" />;
   }
-  
-  return isAdmin() ? <AdminDashboard /> : <UserDashboard />;
+
+  if (isAdmin()) {
+    return <Redirect to="/admin/dashboard" />;
+  } else if (isDoctor()) {
+    return <Redirect to="/doctor/dashboard" />;
+  } else {
+    return <Redirect to="/user/dashboard" />;
+  }
 }
 
 function Router() {
@@ -58,12 +64,11 @@ function Router() {
           </Route>          <Route path="/appointment-dashboard">
             <ProtectedRoute component={AppointmentDashboard} adminOnly={false} />
           </Route>
-          <Route path="/contact" component={Contact} />
-          <Route path="/login">
-            {user ? <Redirect to="/dashboard" /> : <Auth type="login" />}
+          <Route path="/contact" component={Contact} />          <Route path="/login">
+            {user ? <Dashboard /> : <Auth type="login" />}
           </Route>
           <Route path="/register">
-            {user ? <Redirect to="/dashboard" /> : <Auth type="register" />}
+            {user ? <Dashboard /> : <Auth type="register" />}
           </Route>
           <Route component={NotFound} />
         </Switch>

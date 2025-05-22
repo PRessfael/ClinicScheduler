@@ -127,6 +127,85 @@ export const useAppointments = () => {
     return slots;
   };
 
+  // Form submission handler
+  const submitAppointment = async () => {
+    const errors = {};
+    
+    if (!appointmentType) errors.appointmentType = 'Please select an appointment type';
+    if (!selectedDate) errors.date = 'Please select a date';
+    if (!selectedTime) errors.time = 'Please select a time';
+    if (!reason.trim()) errors.reason = 'Please provide a reason for your visit';
+    
+    setFormErrors(errors);
+    
+    if (Object.keys(errors).length === 0) {
+      try {
+        // Get the current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          throw new Error('You must be logged in to make an appointment');
+        }
+
+        // Create appointment date by combining the selected date and time
+        const [hours, minutes] = selectedTime.match(/(\d+):(\d+)/).slice(1);
+        const appointmentDateTime = new Date(selectedDate);
+        appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        // Get the patient record for the current user
+        const { data: patientData, error: patientError } = await supabase
+          .from('patients')
+          .select('patient_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (patientError) {
+          throw new Error('Could not find your patient record. Please contact support.');
+        }        // Insert into appointment queue first
+        const { data: queueData, error: queueError } = await supabase
+          .from('appointment_queue')
+          .insert({
+            appointment_date: appointmentDateTime.toISOString(),
+            patient_id: patientData.patient_id,
+            status: 'waiting',
+            reason: reason
+          })
+          .select()
+          .single();
+
+        if (queueError) throw queueError;
+
+        // Then insert into appointments table with patient_id and queue_id
+        const { error } = await supabase
+          .from('appointments')
+          .insert({
+            appointment_date: appointmentDateTime.toISOString(),
+            appointment_type: appointmentType,
+            doctor_id: provider || null,
+            patient_id: patientData.patient_id,
+            queue_id: queueData.queue_id,
+            status: 'pending'
+          });
+
+        if (queueError) throw queueError;
+
+        // Reset form
+        setAppointmentType('');
+        setProvider('');
+        setReason('');
+        setSelectedTime(null);
+        
+        return true;
+      } catch (error) {
+        console.error('Error submitting appointment:', error);
+        setFormErrors({ submit: error.message || 'Failed to submit appointment. Please try again.' });
+        return false;
+      }
+    }
+    
+    return false;
+  };
+
   return {
     // Appointment data and operations
     appointments,
@@ -154,5 +233,8 @@ export const useAppointments = () => {
     // Helper functions
     getCalendarDays,
     getAvailableTimeSlots,
+
+    // Submit handler
+    submitAppointment,
   };
 };
