@@ -338,7 +338,7 @@ const AdminDashboard = () => {
       )}
       {deletingPatient && (
         <DeleteWarning
-          message={`Are you sure you want to delete ${deletingPatient.name}?`}
+          message={`Are you sure you want to delete ${deletingPatient.name} record?`}
           onCancel={() => setDeletingPatient(null)}
           onConfirm={handleDeleteConfirm}
         />
