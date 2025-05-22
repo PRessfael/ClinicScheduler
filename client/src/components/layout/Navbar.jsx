@@ -3,8 +3,7 @@ import { Link, useLocation } from "wouter";
 import MobileMenu from "./MobileMenu";
 import { useAuth } from "../../hooks/useAuth";
 
-const Navbar = () => {
-  const [location] = useLocation();
+const Navbar = () => {  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout, isAdmin } = useAuth();
 
@@ -19,12 +18,18 @@ const Navbar = () => {
   ];
   if (user) {
     // Add dashboard link based on user type
+    const dashboardPath = user.user_type === "admin" 
+      ? "/admin/dashboard" 
+      : user.user_type === "doctor"
+      ? "/doctor/dashboard"
+      : "/user/dashboard";
+    navLinks.push({ href: dashboardPath, label: "Dashboard" });
+    
     if (user.user_type === "admin") {
-      navLinks.push(
-        { href: "/admin/dashboard", label: "Dashboard" },
-        { href: "/appointment-dashboard", label: "Appointment Dashboard" }
-      );
+      // Admin-specific links
+      navLinks.push({ href: "/appointment-dashboard", label: "Appointment Dashboard" });
     } else if (user.user_type === "doctor") {
+      // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
         { href: "/contact", label: "Contact Us" },
@@ -33,18 +38,16 @@ const Navbar = () => {
       ];
     } else {
       // Regular user links
-      navLinks.push(
-        { href: "/user/dashboard", label: "Dashboard" },
-        { href: "/appointments", label: "My Appointments" }
-      );
+      navLinks.push({ href: "/appointments", label: "My Appointments" });
     }
-  }  const handleLogout = async (e) => {
+  }
+  const handleLogout = async (e) => {
     e.preventDefault();
     console.log("Starting logout process...");
     try {
       await logout();
       console.log("Logout successful");
-      setLocation("/");
+      setLocation("/"); // Redirect to home page after successful logout
     } catch (error) {
       console.error("Logout error:", error);
     }

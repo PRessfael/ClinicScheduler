@@ -42,16 +42,17 @@ const Appointments = () => {
                   availableTimeSlots={getAvailableTimeSlots()}
                 />
               </div>              {/* Appointment Form */}
-              <div className="md:w-1/2 p-6">
-                <AppointmentForm
+              <div className="md:w-1/2 p-6">                <AppointmentForm
                   selectedDate={selectedDate}
                   selectedTime={selectedTime}
+                  setSelectedTime={setSelectedTime}
                   appointmentType={appointmentType}
                   setAppointmentType={setAppointmentType}
                   provider={provider}
                   setProvider={setProvider}
                   reason={reason}
-                  setReason={setReason}                  formErrors={formErrors}
+                  setReason={setReason}
+                  formErrors={formErrors}
                   onSuccess={() => {
                     // Reset form fields after successful submission
                     setSelectedTime("");

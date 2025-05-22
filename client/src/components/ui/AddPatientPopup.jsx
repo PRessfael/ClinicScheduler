@@ -75,25 +75,38 @@ const AddPatientPopup = ({ onClose, onSave }) => {
       const errors = validateForm();
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
-        return;
-      }
+        return;      }      if (!isExistingPatient) {
+        // Generate a patient ID in format P + YYMMDDxxxx (where xxxx is random)
+        const date = new Date();
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        const newPatientId = `P${year}${month}${day}${random}`.substring(0, 10);
+        
+        // First, create the patient
+        const { data: patientData, error: patientError } = await supabase
+          .from("patients")
+          .insert({
+            patient_id: newPatientId,
+            first_name: formData.firstName.trim(),
+            last_name: formData.lastName.trim(),
+            age: parseInt(formData.age)
+          })
+          .select()
+          .single();
 
-      if (!isExistingPatient) {
-        // For new patients, create the patient record first with embedded patient data
+        if (patientError) throw patientError;
+
+        // Then create the patient record
         const { data: recordData, error: recordError } = await supabase
           .from("patient_records")
           .insert({
+            patient_id: patientData.patient_id,
             diagnosis: formData.diagnosis.trim(),
-            treatment: formData.treatment?.trim() || null,
-            patients: {
-              data: {
-                first_name: formData.firstName.trim(),
-                last_name: formData.lastName.trim(),
-                age: parseInt(formData.age)
-              }
-            }
+            treatment: formData.treatment?.trim() || null
           })
-          .select('patient_id')
+          .select()
           .single();
 
         if (recordError) throw recordError;

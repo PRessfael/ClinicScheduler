@@ -1,6 +1,6 @@
 import { format } from "date-fns";
-import { APPOINTMENT_TYPES, PROVIDERS } from "@/lib/constants.jsx";
-import { useState } from 'react';
+import { APPOINTMENT_TYPES } from "@/lib/constants.jsx";
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from "@/hooks/use-toast";
@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 const AppointmentForm = ({
   selectedDate,
   selectedTime,
+  setSelectedTime,
   appointmentType,
   setAppointmentType,
   provider,
@@ -17,7 +18,32 @@ const AppointmentForm = ({
   formErrors = {},
   onSuccess
 }) => {
-  const { user } = useAuth();  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('doctors')
+          .select('doctor_id, name, specialty')
+          .order('name');
+
+        if (error) throw error;
+        setDoctors(data);
+      } catch (error) {
+        console.error('Error fetching doctors:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load doctors list. Please try again later."
+        });
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   const submitAppointment = async () => {
     if (!selectedDate || !selectedTime || !appointmentType || !reason) {
@@ -50,32 +76,27 @@ const AppointmentForm = ({
 
       if (patientError) {
         throw new Error('Could not find your patient record. Please contact support.');
-      }
-
-      // Insert into appointment queue
-      const { data: queueData, error: queueError } = await supabase
-        .from('appointment_queue')
+      }      // First, create the appointment
+      const { data: appointmentData, error: appointmentError } = await supabase
+        .from('appointments')
         .insert({
-          appointment_date: appointmentDateTime.toISOString(),
+          date: format(appointmentDateTime, 'yyyy-MM-dd'),
+          time: `${hours}:${minutes}:00`,
+          doctor_id: provider || null,
           patient_id: patientData.patient_id,
-          status: 'waiting',
-          reason: reason
+          status: 'pending'
         })
         .select()
         .single();
 
-      if (queueError) throw queueError;
+      if (appointmentError) throw appointmentError;
 
-      // Insert into appointments table
-      const { error: appointmentError } = await supabase
-        .from('appointments')
+      // Then add to appointment queue with the appointment ID
+      const { error: queueError } = await supabase
+        .from('appointment_queue')
         .insert({
-          appointment_date: appointmentDateTime.toISOString(),
-          appointment_type: appointmentType,
-          doctor_id: provider || null,
-          patient_id: patientData.patient_id,
-          queue_id: queueData.queue_id,
-          status: 'pending'
+          appointment_id: appointmentData.appointment_id,
+          reason: reason
         });
 
       if (appointmentError) throw appointmentError;      // Success! Reset form and notify user
@@ -141,15 +162,17 @@ const AppointmentForm = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="provider">
               Preferred Provider (Optional)
-            </label>            <select
+            </label>
+            <select
               id="provider"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
-            >              <option value="">No preference</option>
-              {PROVIDERS.map((provider) => (
-                <option key={provider.value} value={provider.value}>
-                  {provider.label}
+            >
+              <option value="">No preference</option>
+              {doctors.map((doctor) => (
+                <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                  {doctor.name}{doctor.specialty ? ` (${doctor.specialty})` : ''}
                 </option>
               ))}
             </select>

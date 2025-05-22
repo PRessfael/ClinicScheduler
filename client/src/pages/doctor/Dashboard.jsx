@@ -60,9 +60,36 @@ const DoctorDashboard = () => {
     );
     setEditingPatient(null);
   };
+  const refreshStats = async () => {
+    try {
+      const [
+        { count: patientsCount }, 
+        { count: totalAppCount }, 
+        { count: pendingCount }, 
+        { count: completedCount }
+      ] = await Promise.all([
+        supabase.from("patients").select("*", { count: "exact" }),
+        supabase.from("appointments").select("*", { count: "exact" }),
+        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "pending"),
+        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "completed")
+      ]);
+
+      setStats({
+        totalPatients: patientsCount || 0,
+        totalAppointments: totalAppCount || 0,
+        pendingAppointments: pendingCount || 0,
+        completedAppointments: completedCount || 0
+      });
+    } catch (error) {
+      console.error("Error refreshing stats:", error);
+    }
+  };
 
   const handleAddPatientSave = () => {
     setAddingPatient(false);
+    // Re-fetch both patients and stats
+    fetchPatients();
+    refreshStats();
   };
 
   useEffect(() => {
@@ -157,23 +184,35 @@ const DoctorDashboard = () => {
 
     fetchCompletedAppointments();
   }, []);
+  const fetchPatients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("patient_records")
+        .select(`
+          record_id,
+          diagnosis,
+          treatment,
+          patients(first_name, last_name, age)
+        `)
+        .order("record_id", { ascending: true });
+
+      if (error) throw error;
+
+      const formattedPatients = data.map(record => ({
+        id: record.record_id,
+        name: `${record.patients.first_name} ${record.patients.last_name}`,
+        age: record.patients.age,
+        condition: record.diagnosis,
+        treatment: record.treatment
+      }));
+
+      setPatients(formattedPatients);
+    } catch (error) {
+      console.error("Error fetching patient records:", error);
+    }
+  };
 
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("patient_records")
-          .select("record_id, patient_id, diagnosis, treatment")
-          .order("record_id", { ascending: true });
-
-        if (error) throw error;
-
-        setPatients(data);
-      } catch (error) {
-        console.error("Error fetching patient records:", error);
-      }
-    };
-
     fetchPatients();
   }, []);
 
@@ -217,17 +256,19 @@ const DoctorDashboard = () => {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200">              <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Record ID
+                    ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient ID
+                    Patient Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Diagnosis
+                    Age
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Condition
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Treatment
@@ -239,18 +280,21 @@ const DoctorDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {patients.map(patient => (
-                  <tr key={patient.record_id} className="hover:bg-gray-50">
+                  <tr key={patient.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {patient.record_id}
+                      {patient.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {patient.patient_id}
+                      {patient.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.diagnosis}
+                      {patient.age}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.treatment}
+                      {patient.condition}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.treatment || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                       <button
