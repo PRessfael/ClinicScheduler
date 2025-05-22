@@ -9,9 +9,8 @@ const UserDashboard = () => {
   const [appointments, setAppointments] = useState([]);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const fetchUserData = async () => {
   useEffect(() => {
-    const fetchUserData = async () => {
       try {
         if (user?.user_type === "user") {
           // Fetch user's appointments
@@ -81,10 +80,22 @@ const UserDashboard = () => {
           ) : (
             <p>No appointments scheduled.</p>
           )}
-          
-          <div className="mt-6">
+            <div className="mt-6">
             <h3 className="text-xl font-semibold mb-4">Book New Appointment</h3>
-            <AppointmentForm />
+            <AppointmentForm
+              selectedDate={new Date()}
+              selectedTime=""
+              appointmentType=""
+              setAppointmentType={value => console.log('Appointment type:', value)}
+              provider=""
+              setProvider={value => console.log('Provider:', value)}
+              reason=""
+              setReason={value => console.log('Reason:', value)}
+              onSuccess={() => {
+                // Refresh appointments list after successful booking
+                fetchUserData();
+              }}
+            />
           </div>
         </div>
 
