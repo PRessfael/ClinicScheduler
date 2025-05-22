@@ -61,15 +61,19 @@ const Auth = ({ type = "login" }) => {
     setIsSubmitting(true);
 
     try {
-      if (isLogin) {
-        const { success, error, user_type } = await login(formData.username, formData.password);
+      if (isLogin) {        const { success, error, user_type } = await login(formData.username, formData.password);
         if (!success) {
           setFormErrors({ general: error });
         } else {
-          setLocation("/dashboard"); // Use consistent dashboard path for all users
+          if (user_type === 'admin') {
+            setLocation("/admin/dashboard");
+          } else if (user_type === 'doctor') {
+            setLocation("/doctor/dashboard");
+          } else {
+            setLocation("/user/dashboard");
+          }
         }
-      } else {
-        const user_type = formData.username.toLowerCase().includes("admin")
+      } else {        const user_type = formData.username.toLowerCase().includes("admin")
           ? "admin"
           : "user";
         const { success, error } = await register(
@@ -81,7 +85,7 @@ const Auth = ({ type = "login" }) => {
         if (!success) {
           setFormErrors({ general: error });
         } else {
-          setLocation("/dashboard");
+          setLocation("/");
         }
       }
     } catch (error) {
@@ -107,7 +111,7 @@ const Auth = ({ type = "login" }) => {
             )}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username or Email
+                Username or Email 
               </label>
               <input
                 id="username"
