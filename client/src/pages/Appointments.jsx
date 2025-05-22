@@ -51,15 +51,7 @@ const Appointments = () => {
                   provider={provider}
                   setProvider={setProvider}
                   reason={reason}
-                  setReason={setReason}
-                  formErrors={formErrors}
-                  onSuccess={() => {
-                    setSelectedTime("");
-                    setAppointmentType("");
-                    setProvider("");
-                    setReason("");
-                  }}
-                  formErrors={formErrors}
+                  setReason={setReason}                  formErrors={formErrors}
                   onSuccess={() => {
                     // Reset form fields after successful submission
                     setSelectedTime("");

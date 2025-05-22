@@ -17,9 +17,9 @@ const AppointmentForm = ({
   formErrors = {},
   onSuccess
 }) => {
-  const { user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const submitAppointment = async () => {
     if (!selectedDate || !selectedTime || !appointmentType || !reason) {
       toast({
         variant: "destructive",
