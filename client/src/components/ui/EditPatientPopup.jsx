@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 
 const EditPatientPopup = ({ patient, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    diagnosis: patient.diagnosis || patient.condition || "",
+    diagnosis: patient.condition || "",
     treatment: patient.treatment || "",
   });
 
@@ -32,9 +32,10 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
 
       if (recordError) throw recordError;
 
+      // Return updated data matching the structure expected by the table
       onSave({
         ...patient,
-        diagnosis: formData.diagnosis.trim(),
+        condition: formData.diagnosis.trim(),
         treatment: formData.treatment?.trim() || null,
       });
       onClose();
@@ -51,12 +52,7 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700">Name</label>
-          <input
-            type="text"
-            value={patient.name || `${patient.first_name} ${patient.last_name}`}
-            disabled
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm"
-          />
+          <p className="text-gray-900">{patient.name}</p>
         </div>
 
         <div className="mb-4">
@@ -66,6 +62,7 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
             value={formData.diagnosis}
             onChange={handleChange}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm"
+            rows="3"
           />
         </div>
 
@@ -76,13 +73,14 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
             value={formData.treatment}
             onChange={handleChange}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm"
+            rows="3"
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300"
+            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
           >
             Cancel
           </button>

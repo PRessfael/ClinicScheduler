@@ -1,6 +1,69 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
-const ViewPatientDetails = ({ patient, onClose }) => {
+const ViewPatientDetails = ({ recordId, onClose }) => {
+  const [patient, setPatient] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPatientDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("patient_records")
+          .select(`
+            record_id,
+            diagnosis,
+            treatment,
+            patients(patient_id, first_name, last_name, age)
+          `)
+          .eq("record_id", recordId)
+          .single();
+
+        if (error) throw error;
+
+        setPatient({
+          name: `${data.patients.first_name} ${data.patients.last_name}`,
+          age: data.patients.age,
+          condition: data.diagnosis,
+          treatment: data.treatment
+        });
+      } catch (error) {
+        console.error("Error fetching patient details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatientDetails();
+  }, [recordId]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#1e5631]"></div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+          <h2 className="text-xl font-semibold mb-4">Error</h2>
+          <p>Could not find patient details.</p>
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={onClose}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
