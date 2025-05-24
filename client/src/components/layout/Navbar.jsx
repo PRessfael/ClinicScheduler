@@ -3,8 +3,7 @@ import { Link, useLocation } from "wouter";
 import MobileMenu from "./MobileMenu";
 import { useAuth } from "../../hooks/useAuth";
 
-const Navbar = () => {
-  const [location] = useLocation();
+const Navbar = () => {  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout, isAdmin } = useAuth();
 
@@ -17,21 +16,25 @@ const Navbar = () => {
     { href: "/", label: "Home" },
     { href: "/contact", label: "Contact Us" },
   ];
-
   if (user) {
-    // Add dashboard link for all authenticated users
-    navLinks.push({ href: "/dashboard", label: "Dashboard" });
-
+    // Add dashboard link based on user type
+    const dashboardPath = user.user_type === "admin" 
+      ? "/admin/dashboard" 
+      : user.user_type === "doctor"
+      ? "/doctor/dashboard"
+      : "/user/dashboard";
+    navLinks.push({ href: dashboardPath, label: "Dashboard" });
+    
     if (user.user_type === "admin") {
       // Admin-specific links
-      navLinks.push({ href: "/records", label: "Patient Records" });
+      navLinks.push({ href: "/appointment-dashboard", label: "Appointment Dashboard" });
     } else if (user.user_type === "doctor") {
       // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
         { href: "/contact", label: "Contact Us" },
         { href: "/doctor/dashboard", label: "Dashboard" },
-        { href: "/records", label: "Patient Records" },
+        { href: "/appointment-dashboard", label: "Appointment Dashboard" },
       ];
     } else {
       // Regular user links
@@ -64,7 +67,7 @@ const Navbar = () => {
               key={link.href}
               href={link.href}
               className={`text-white${
-                location !== link.href ? "/90 hover:text-white" : ""
+                location !== link.href ? "/90 hover:text-white text-white" : ""
               } font-medium px-2 py-1 ${
                 location === link.href
                   ? "border-b-2 border-white"

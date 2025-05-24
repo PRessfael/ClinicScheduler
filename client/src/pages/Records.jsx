@@ -1,6 +1,9 @@
 import RecordsTable from "@/components/records/RecordsTable";
 import RecordsUpload from "@/components/records/RecordsUpload";
 import { useRecords } from "@/hooks/useRecords";
+import { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { supabase } from "../lib/supabase";
 
 const Records = () => {
   const {

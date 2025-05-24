@@ -14,13 +14,20 @@ const DoctorDashboard = () => {
     pendingAppointments: 0,
     completedAppointments: 0
   });
-
   const [patients, setPatients] = useState([]);
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
-  const [addingPatient, setAddingPatient] = useState(false);
-
+  const [addingPatient, setAddingPatient] = useState(false);  const [currentPage, setCurrentPage] = useState(1);
+  const [patientsPerPage] = useState(5);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const totalPages = Math.ceil(totalRecords / patientsPerPage);
+  // Navigation functions
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
   const deletePatient = async (recordId) => {
     if (!recordId) {
       console.error("Invalid record ID provided for deletion.");
@@ -35,7 +42,21 @@ const DoctorDashboard = () => {
 
       if (error) throw error;
 
-      setPatients((prevPatients) => prevPatients.filter((patient) => patient.record_id !== recordId));
+      // After successful deletion, check if we need to adjust the current page
+      const newTotalRecords = totalRecords - 1;
+      const newTotalPages = Math.ceil(newTotalRecords / patientsPerPage);
+      
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        // If we're on a page that no longer exists, go to the last page
+        setCurrentPage(newTotalPages);
+      } else {
+        // Otherwise, refresh the current page
+        fetchPatients();
+      }
+      
+      // Update stats
+      setTotalRecords(newTotalRecords);
+      setStats(prev => ({ ...prev, totalPatients: newTotalRecords }));
     } catch (error) {
       console.error("Error deleting patient record:", error);
     }
@@ -60,9 +81,36 @@ const DoctorDashboard = () => {
     );
     setEditingPatient(null);
   };
+  const refreshStats = async () => {
+    try {
+      const [
+        { count: patientsCount }, 
+        { count: totalAppCount }, 
+        { count: pendingCount }, 
+        { count: completedCount }
+      ] = await Promise.all([
+        supabase.from("patients").select("*", { count: "exact" }),
+        supabase.from("appointments").select("*", { count: "exact" }),
+        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "pending"),
+        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "completed")
+      ]);
+
+      setStats({
+        totalPatients: patientsCount || 0,
+        totalAppointments: totalAppCount || 0,
+        pendingAppointments: pendingCount || 0,
+        completedAppointments: completedCount || 0
+      });
+    } catch (error) {
+      console.error("Error refreshing stats:", error);
+    }
+  };
 
   const handleAddPatientSave = () => {
     setAddingPatient(false);
+    // Re-fetch both patients and stats
+    fetchPatients();
+    refreshStats();
   };
 
   useEffect(() => {
@@ -156,26 +204,57 @@ const DoctorDashboard = () => {
     };
 
     fetchCompletedAppointments();
-  }, []);
+  }, []);  const fetchPatients = async () => {
+    try {
+      const from = (currentPage - 1) * patientsPerPage;
+      const to = from + patientsPerPage - 1;
 
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("patient_records")
-          .select("record_id, patient_id, diagnosis, treatment")
-          .order("record_id", { ascending: true });
+      // Get paginated records
+      const { data, error, count } = await supabase
+        .from("patient_records")
+        .select(`
+          record_id,
+          diagnosis,
+          treatment,
+          patients(patient_id, first_name, last_name, age)
+        `, { count: 'exact' })
+        .order("record_id", { ascending: true })
+        .range(from, to);
 
-        if (error) throw error;
-
-        setPatients(data);
-      } catch (error) {
-        console.error("Error fetching patient records:", error);
+      if (error) throw error;
+      
+      // Handle no data case
+      if (!data || data.length === 0) {
+        setPatients([]);
+        setTotalRecords(count || 0);
+        // If we're on a page higher than the total pages, go back to the last valid page
+        const maxPage = Math.ceil((count || 0) / patientsPerPage);
+        if (currentPage > maxPage && maxPage > 0) {
+          setCurrentPage(maxPage);
+        }
+        return;
       }
-    };
 
+      const formattedPatients = data.map(record => ({
+        id: record.record_id,
+        record_id: record.record_id,
+        name: record.patients ? `${record.patients.first_name} ${record.patients.last_name}` : 'Unknown',
+        age: record.patients?.age || 'N/A',
+        condition: record.diagnosis || 'N/A',
+        treatment: record.treatment || 'N/A',
+        patient_id: record.patients?.patient_id
+      }));
+
+      setPatients(formattedPatients);
+      setTotalRecords(count || 0);
+      setStats(prev => ({ ...prev, totalPatients: count || 0 }));
+    } catch (error) {
+      console.error("Error fetching patient records:", error);
+    }
+  };
+  useEffect(() => {
     fetchPatients();
-  }, []);
+  }, [currentPage, patientsPerPage]); // Refetch when page changes or number of patients per page changes
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -221,13 +300,16 @@ const DoctorDashboard = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Record ID
+                    ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient ID
+                    Patient Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Diagnosis
+                    Age
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Condition
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Treatment
@@ -236,21 +318,23 @@ const DoctorDashboard = () => {
                     Actions
                   </th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              </thead>              <tbody className="bg-white divide-y divide-gray-200">
                 {patients.map(patient => (
-                  <tr key={patient.record_id} className="hover:bg-gray-50">
+                  <tr key={patient.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {patient.record_id}
+                      {patient.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {patient.patient_id}
+                      {patient.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.diagnosis}
+                      {patient.age}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.treatment}
+                      {patient.condition}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.treatment || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                       <button
@@ -276,6 +360,36 @@ const DoctorDashboard = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Pagination Controls */}
+          <div className="px-6 py-4 flex justify-between items-center bg-gray-50 border-t">            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
+              <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span>{" "}
+              of <span className="font-medium">{totalRecords}</span> results
+            </div>
+            <div className="flex space-x-2">              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 border rounded-md text-sm font-medium ${
+                  currentPage === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className={`px-3 py-1 border rounded-md text-sm font-medium ${
+                  currentPage >= totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}
