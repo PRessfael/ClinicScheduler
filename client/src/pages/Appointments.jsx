@@ -34,14 +34,18 @@ const Appointments = () => {
         const { data: appointmentsData, error: appointmentsError } = await supabase
           .from("appointments")
           .select(`
-            *,
-            doctors (
+            appointment_id,
+            date,
+            time,
+            status,
+            reason,
+            doctor:doctors(
               name,
               specialty
             )
           `)
           .eq("patient_id", patientData.patient_id)
-          .order("appointment_date", { ascending: true });
+          .order("date", { ascending: true });
 
         if (appointmentsError) throw appointmentsError;
         setAppointments(appointmentsData);
@@ -118,10 +122,10 @@ const Appointments = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${appointment.status === 'confirmed'
-                            ? 'bg-green-100 text-green-800'
-                            : appointment.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800'
+                          : appointment.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
                           }`}>
                           {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                         </span>
