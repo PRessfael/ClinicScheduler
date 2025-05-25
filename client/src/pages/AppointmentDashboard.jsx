@@ -18,7 +18,7 @@ const AppointmentDashboard = () => {
             queue_id,
             appointment_id,
             reason,
-            appointment:appointments!inner(
+            appointment:appointments(
               appointment_id,
               patient_id,
               doctor_id,
@@ -96,13 +96,13 @@ const AppointmentDashboard = () => {
     return (
       <div className="flex space-x-2">
         <button
-          onClick={() => updateQueueEntry(entry.queue_id, entry.appointment_id, 'approve')}
+          onClick={() => updateQueueEntry(entry.queue_id, entry.appointment.appointment_id, 'approve')}
           className="px-3 py-1 text-white text-sm rounded-md bg-green-500 hover:bg-green-600"
         >
           Approve
         </button>
         <button
-          onClick={() => updateQueueEntry(entry.queue_id, entry.appointment_id, 'cancel')}
+          onClick={() => updateQueueEntry(entry.queue_id, entry.appointment.appointment_id, 'cancel')}
           className="px-3 py-1 text-white text-sm rounded-md bg-red-500 hover:bg-red-600"
         >
           Cancel
@@ -176,22 +176,26 @@ const AppointmentDashboard = () => {
                       {`${item.appointment.patient.first_name} ${item.appointment.patient.last_name}`}
                     </td>
                     <td className="px-6 py-4">
-                      <div>
-                        {item.appointment.doctor.name}
-                        <span className="text-sm text-gray-500 block">
-                          {item.appointment.doctor.specialty}
-                        </span>
-                      </div>
+                      {item.appointment.doctor ? (
+                        <div>
+                          {item.appointment.doctor.name}
+                          <span className="text-sm text-gray-500 block">
+                            {item.appointment.doctor.specialty}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No preference</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {new Date(item.appointment.date).toLocaleDateString()} {item.appointment.time}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.appointment.status === 'confirmed'
-                        ? 'bg-green-100 text-green-800'
-                        : item.appointment.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800'
+                          : item.appointment.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
                         }`}>
                         {item.appointment.status.charAt(0).toUpperCase() +
                           item.appointment.status.slice(1)}
