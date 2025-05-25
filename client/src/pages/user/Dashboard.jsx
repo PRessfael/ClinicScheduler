@@ -71,65 +71,43 @@ const UserDashboard = () => {
           doctor: record.doctors ? `${record.doctors.name} (${record.doctors.specialty})` : 'Not Assigned'
         }));
 
-        // Fetch pending appointments
-        const [appointmentsResponse, queueResponse] = await Promise.all([
-          // Get pending appointments
-          supabase
-            .from("appointments")
-            .select(`
+        // Fetch pending appointments from appointment_queue
+        const { data: queueData, error: queueError } = await supabase
+          .from("appointment_queue")
+          .select(`
+            queue_id,
+            reason,
+            appointments!inner (
               appointment_id,
               date,
               time,
               status,
-              reason,
-              doctor:doctors (
+              doctors (
                 name,
                 specialty
               )
-            `)
-            .eq("patient_id", patientId)
-            .eq("status", "pending")
-            .order("date", { ascending: true })
-            .order("time", { ascending: true }),
+            )
+          `)
+          .eq("appointments.patient_id", patientId);
 
-          // Get queued appointments
-          supabase
-            .from("appointment_queue")
-            .select(`
-              queue_id,
-              reason,
-              appointments!inner (
-                appointment_id,
-                date,
-                time,
-                doctors (
-                  name,
-                  specialty
-                )
-              )
-            `)
-            .eq("appointments.patient_id", patientId)
-        ]);
+        if (queueError) throw queueError;
 
-        if (appointmentsResponse.error) throw appointmentsResponse.error;
-        if (queueResponse.error) throw queueResponse.error;
-
-        // Combine and format pending appointments
-        const pendingAppts = [
-          ...(appointmentsResponse.data || []),
-          ...(queueResponse.data || []).map(queue => ({
-            appointment_id: queue.appointments.appointment_id,
-            date: queue.appointments.date,
-            time: queue.appointments.time,
-            status: "pending",
-            reason: queue.reason,
-            doctor: queue.appointments.doctors,
-            queue_id: queue.queue_id
-          }))
-        ];
+        // Format queue data
+        const formattedAppointments = queueData.map(queue => ({
+          queue_id: queue.queue_id,
+          appointment_id: queue.appointments.appointment_id,
+          date: queue.appointments.date,
+          time: queue.appointments.time,
+          status: "In Queue",
+          reason: queue.reason,
+          doctor: queue.appointments.doctors ? {
+            name: queue.appointments.doctors.name,
+            specialty: queue.appointments.doctors.specialty
+          } : null
+        }));
 
         setRecords(formattedRecords);
-        setPendingAppointments(pendingAppts);
+        setPendingAppointments(formattedAppointments);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -192,7 +170,7 @@ const UserDashboard = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {pendingAppointments.map((appointment) => (
-                      <tr key={appointment.queue_id || appointment.appointment_id}>
+                      <tr key={appointment.queue_id}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {new Date(appointment.date).toLocaleDateString()}
                         </td>
@@ -214,7 +192,7 @@ const UserDashboard = () => {
                         <td className="px-6 py-4">{appointment.reason}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            {appointment.queue_id ? "In Queue" : "Pending"}
+                            {appointment.status}
                           </span>
                         </td>
                       </tr>
