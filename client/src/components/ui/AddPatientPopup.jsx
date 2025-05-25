@@ -137,15 +137,15 @@ const AddPatientPopup = ({ onClose, onSave }) => {
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-        <h2 className="text-xl font-semibold mb-4">Add New Patient</h2>
+        <h2 className="text-xl font-semibold mb-4">Add Patient Record</h2>
 
         <div className="mb-4">
           <div className="flex space-x-4 mb-4">
             <button
               type="button"
               className={`px-4 py-2 rounded-md ${isExistingPatient
-                  ? "bg-[#1e5631] text-white"
-                  : "bg-gray-200 text-gray-700"
+                ? "bg-[#1e5631] text-white"
+                : "bg-gray-200 text-gray-700"
                 }`}
               onClick={() => setIsExistingPatient(true)}
             >
@@ -154,12 +154,12 @@ const AddPatientPopup = ({ onClose, onSave }) => {
             <button
               type="button"
               className={`px-4 py-2 rounded-md ${!isExistingPatient
-                  ? "bg-[#1e5631] text-white"
-                  : "bg-gray-200 text-gray-700"
+                ? "bg-[#1e5631] text-white"
+                : "bg-gray-200 text-gray-700"
                 }`}
               onClick={() => setIsExistingPatient(false)}
             >
-              New Patient
+              Non-User Patient
             </button>
           </div>
 
