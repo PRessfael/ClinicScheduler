@@ -35,21 +35,24 @@ const Auth = ({ type = "login" }) => {
 
     if (!formData.username.trim()) {
       errors.username = "Username is required";
-    }
-
-    if (!formData.password) {
+    }    if (!formData.password) {
       errors.password = "Password is required";
     } else if (formData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
     }
 
-    if (!isLogin && !formData.email.trim()) {
-      errors.email = "Email is required";
-    } else if (
-      !isLogin &&
-      !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(formData.email)
-    ) {
-      errors.email = "Invalid email address";
+    if (!isLogin) {
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = "Please confirm your password";
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = "Passwords do not match";
+      }
+
+      if (!formData.email.trim()) {
+        errors.email = "Email is required";
+      } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(formData.email)) {
+        errors.email = "Invalid email address";
+      }
     }
 
     setFormErrors(errors);
@@ -72,20 +75,35 @@ const Auth = ({ type = "login" }) => {
           } else {
             setLocation("/user/dashboard");
           }
-        }
-      } else {        const user_type = formData.username.toLowerCase().includes("admin")
-          ? "admin"
-          : "user";
-        const { success, error } = await register(
+        }      } else {
+        // For registration, set default user type as "user"
+        // Admin accounts should be created through a different process
+        const { success, error, user_type } = await register(
           formData.email,
           formData.password,
-          user_type,
+          "user",
           formData.username
-        );
-        if (!success) {
-          setFormErrors({ general: error });
-        } else {
-          setLocation("/");
+        );if (!success) {          if (error.includes("Username already exists")) {
+            setFormErrors({ username: "This username is already taken. Please choose another one." });
+          } else if (error.includes("Email already")) {
+            setFormErrors({ email: "This email is already registered. Please use another email or try logging in." });
+          } else if (error.includes("password")) {
+            setFormErrors({ password: error });
+          } else if (error.includes("Failed to create user profile")) {
+            setFormErrors({ general: "There was a problem creating your account. Please try again." });
+          } else {
+            console.error("Registration error:", error);
+            setFormErrors({ general: error });
+          }
+          setIsSubmitting(false);
+        } else {          // Registration successful          // Registration successful and user is automatically logged in
+          if (user_type === 'admin') {
+            setLocation("/admin/dashboard");
+          } else if (user_type === 'doctor') {
+            setLocation("/doctor/dashboard");
+          } else {
+            setLocation("/user/dashboard");
+          }
         }
       }
     } catch (error) {
@@ -108,10 +126,8 @@ const Auth = ({ type = "login" }) => {
               <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                 <span className="block sm:inline">{formErrors.general}</span>
               </div>
-            )}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username or Email 
+            )}            <div>              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                {isLogin ? "Username or email" : "Username"}
               </label>
               <input
                 id="username"

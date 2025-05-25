@@ -14,28 +14,68 @@ const AdminDashboard = () => {
     pendingAppointments: 0,
     completedAppointments: 0
   });
-  
-  const [patients, setPatients] = useState([]);
+    const [patients, setPatients] = useState([]);
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
-  const [isAddPatientPopupOpen, setIsAddPatientPopupOpen] = useState(false);
-
+  const [isAddPatientPopupOpen, setIsAddPatientPopupOpen] = useState(false);    const [currentPage, setCurrentPage] = useState(1);
+  const [patientsPerPage] = useState(5);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const totalPages = Math.ceil(totalRecords / patientsPerPage);
   const deletePatient = async (recordId) => {
     if (!recordId) {
       console.error("Invalid record ID provided for deletion.");
       return;
     }
-
+    
     try {
-      const { error } = await supabase
+      // First, get the patient_id from the patient_records table
+      const { data: recordData, error: recordFetchError } = await supabase
+        .from("patient_records")
+        .select("patient_id")
+        .eq("record_id", recordId)
+        .single();
+
+      if (recordFetchError) throw recordFetchError;
+
+      // Delete the patient record first (due to foreign key constraint)
+      const { error: recordDeleteError } = await supabase
         .from("patient_records")
         .delete()
         .eq("record_id", recordId);
 
-      if (error) throw error;
+      if (recordDeleteError) throw recordDeleteError;
+
+      // Then delete the patient from patients table if they have no other records
+      const { data: otherRecords, error: checkError } = await supabase
+        .from("patient_records")
+        .select("record_id")
+        .eq("patient_id", recordData.patient_id);
+
+      if (checkError) throw checkError;
+
+      // Only delete from patients table if this was their last record and they're not a registered user
+      if (otherRecords.length === 0) {
+        const { data: patientData, error: patientFetchError } = await supabase
+          .from("patients")
+          .select("user_id")
+          .eq("patient_id", recordData.patient_id)
+          .single();
+
+        if (!patientFetchError && !patientData.user_id) {
+          // Only delete if the patient is not linked to a user account
+          const { error: patientDeleteError } = await supabase
+            .from("patients")
+            .delete()
+            .eq("patient_id", recordData.patient_id);
+
+          if (patientDeleteError) throw patientDeleteError;
+        }
+      }
 
       setPatients((prevPatients) => prevPatients.filter((patient) => patient.id !== recordId));
+      // Update all stats after deleting a patient
+      updateAllStats();
     } catch (error) {
       console.error("Error deleting patient record:", error);
     }
@@ -49,40 +89,13 @@ const AdminDashboard = () => {
     );
     setEditingPatient(null);
   };
-
   const handleAddPatient = () => {
     setIsAddPatientPopupOpen(true);
-  };
-  const refreshStats = async () => {
-    try {
-      const [
-        { count: patientsCount }, 
-        { count: totalAppCount }, 
-        { count: pendingCount }, 
-        { count: completedCount }
-      ] = await Promise.all([
-        supabase.from("patients").select("*", { count: "exact" }),
-        supabase.from("appointments").select("*", { count: "exact" }),
-        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "pending"),
-        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "completed")
-      ]);
-
-      setStats({
-        totalPatients: patientsCount || 0,
-        totalAppointments: totalAppCount || 0,
-        pendingAppointments: pendingCount || 0,
-        completedAppointments: completedCount || 0
-      });
-    } catch (error) {
-      console.error("Error refreshing stats:", error);
-    }
-  };
-
-  const handleAddPatientSave = () => {
+  };  const handleAddPatientSave = () => {
     setIsAddPatientPopupOpen(false);
-    // Re-fetch both patients and stats
+    // Re-fetch patients and update all stats
     fetchPatients();
-    refreshStats();
+    updateAllStats();
   };
 
   const handleDeleteConfirm = async () => {
@@ -90,24 +103,27 @@ const AdminDashboard = () => {
       await deletePatient(deletingPatient.id);
       setDeletingPatient(null);
     }
-  };
-
-  const fetchPatients = async () => {
+  };  const fetchPatients = async () => {
     try {
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * patientsPerPage;
+      const to = from + patientsPerPage - 1;
+
+      // Get paginated records with total count
+      const { data, error, count } = await supabase
         .from("patient_records")
         .select(`
           record_id,
           diagnosis,
           treatment,
           patients(first_name, last_name, age)
-        `)
-        .order("record_id", { ascending: true });
+        `, { count: 'exact' })
+        .order("record_id", { ascending: true })
+        .range(from, to);
 
       if (error) throw error;
 
       const formattedPatients = data.map(record => ({
-        id: record.record_id, // Use record_id here
+        id: record.record_id,
         name: `${record.patients.first_name} ${record.patients.last_name}`,
         age: record.patients.age,
         condition: record.diagnosis,
@@ -115,19 +131,121 @@ const AdminDashboard = () => {
       }));
 
       setPatients(formattedPatients);
+      setTotalRecords(count || 0);
     } catch (error) {
       console.error("Error fetching patient records:", error);
+    }
+  };  useEffect(() => {
+    fetchPatients();
+  }, [currentPage]);
+    const fetchStats = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("patient_records")
+        .select("record_id", { count: "exact" });
+
+      if (error) throw error;
+
+      setStats(prevStats => ({
+        ...prevStats,
+        totalPatients: count || 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching total patients:", error);
+    }
+  };
+
+  // Fetch all stats on component mount
+  useEffect(() => {
+    fetchStats();
+  }, []);
+  const fetchAppointments = async () => {
+    try {
+      const { count: totalCount, error: totalError } = await supabase
+        .from("appointments")
+        .select("appointment_id", { count: "exact" });
+
+      if (totalError) throw totalError;
+      console.log("Total Appointments Query Result:", totalCount);
+
+      const { count: pendingCount, error: pendingError } = await supabase
+        .from("appointment_queue")
+        .select("queue_id", { count: "exact" });
+
+      if (pendingError) throw pendingError;
+      console.log("Pending Appointments Query Result:", pendingCount);
+
+      setStats(prevStats => ({
+        ...prevStats,
+        totalAppointments: (totalCount || 0) + (pendingCount || 0),
+      }));
+    } catch (error) {
+      console.error("Error fetching total appointments including pending:", error);
     }
   };
 
   useEffect(() => {
-    fetchPatients();
+    fetchAppointments();
   }, []);
-  
-  // Fetch all stats on component mount
+  const fetchPendingAppointments = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("appointment_queue")
+        .select("queue_id", { count: "exact" });
+
+      if (error) throw error;
+
+      setStats(prevStats => ({
+        ...prevStats,
+        pendingAppointments: count || 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching pending appointments:", error);
+    }
+  };
+
   useEffect(() => {
-    refreshStats();
+    fetchPendingAppointments();
   }, []);
+  const fetchCompletedAppointments = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("appointments")
+        .select("appointment_id", { count: "exact" })
+        .eq("status", "completed");
+
+      if (error) throw error;
+
+      setStats(prevStats => ({
+        ...prevStats,
+        completedAppointments: count || 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching completed appointments:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompletedAppointments();
+  }, []);
+
+  const handlePageChange = async (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      await fetchPatients();
+    }
+  };
+
+  const updateAllStats = async () => {
+    await Promise.all([
+      fetchStats(),
+      fetchAppointments(),
+      fetchPendingAppointments(),
+      fetchCompletedAppointments()
+    ]).catch(error => {
+      console.error("Error updating stats:", error);
+    });
+  };
 
   //---------------------------------//
   return (
@@ -239,15 +357,31 @@ const AdminDashboard = () => {
             >
               Add New Patient
             </button>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-700 mr-4">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of <span className="font-medium">{stats.totalPatients}</span> patients
-              </span>
-              <div className="flex">
-                <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-l">
+            <div className="flex items-center">            <div className="text-sm text-gray-700 mr-4">
+                Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
+                <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span> of{" "}
+                <span className="font-medium">{totalRecords}</span> patients
+              </div>              <div className="flex space-x-2">
+                <button 
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 border rounded-md text-sm font-medium ${
+                    currentPage === 1
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
                   Previous
                 </button>
-                <button className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 px-3 py-1 rounded-r ml-px">
+                <button 
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  className={`px-3 py-1 border rounded-md text-sm font-medium ${
+                    currentPage >= totalPages
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
                   Next
                 </button>
               </div>
@@ -277,10 +411,7 @@ const AdminDashboard = () => {
       )}      {isAddPatientPopupOpen && (
         <AddPatientPopup
           onClose={() => setIsAddPatientPopupOpen(false)}
-          onSave={() => {
-            handleAddPatientSave();
-            refreshStats();
-          }}
+          onSave={handleAddPatientSave}
         />
       )}
     </div>

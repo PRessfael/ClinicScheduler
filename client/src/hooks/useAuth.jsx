@@ -45,80 +45,180 @@ export const AuthProvider = ({ children }) => {
 
     return () => authListener.subscription.unsubscribe();
   }, []);
-
   // Login function
   const login = async (identifier, password) => {
     try {
       if (!identifier || !password) {
-        console.error("Login error: Missing identifier or password");
         throw new Error("Username/Email and password are required");
       }
 
-      console.log("Attempting to fetch user by identifier (username or email):", identifier);
+      // First find the user to get their email
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("email, password, user_type")
-        .or(`username.eq.${identifier},email.eq.${identifier}`)
+        .select("email, user_type, username")
+        .or(`username.eq."${identifier}",email.eq."${identifier}"`)
         .single();
 
-      if (userError) {
-        console.error("Login error: User not found or invalid identifier:", userError);
+      if (userError || !userData) {
+        console.error("User lookup error:", userError);
         throw new Error("Invalid username/email or password");
       }
 
-      console.log("User data fetched successfully:", userData);
-      console.log("Attempting to authenticate with Supabase using email:", userData.email);
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      // Then attempt to sign in with Supabase Auth
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: userData.email,
         password,
       });
 
       if (authError) {
-        console.error("Login error: Authentication failed:", authError);
+        console.error("Auth error:", authError);
         throw new Error("Invalid username/email or password");
       }
 
-      console.log("Authentication successful. Setting user state.");
-      setUser({ username: identifier, user_type: userData.user_type });
+      if (!data?.user) {
+        throw new Error("Login failed");
+      }
+
+      // Set user state with the correct information
+      setUser({
+        id: data.user.id,
+        username: userData.username,
+        user_type: userData.user_type
+      });
+
       return { success: true, user_type: userData.user_type };
     } catch (error) {
       console.error("Login error:", error);
       return { success: false, error: error.message };
     }
-  };
-
-  // Register function
+  };  // Register function
   const register = async (email, password, user_type, username) => {
     try {
-      console.log("Attempting to register user with email:", email);
-      const { data: session, error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        console.error("Registration error: Supabase auth sign-up failed:", error);
-        throw error;
+      // First check if username or email already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from("users")
+        .select("username, email")
+        .or(`username.eq.${username},email.eq.${email}`)
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no user found
+
+      // Only throw if there's an error and it's not a "no rows" error
+      if (checkError) {
+        console.error("User check error:", checkError);
+        throw new Error("Failed to check existing user");
       }
 
-      console.log("Supabase auth sign-up successful. Inserting user into 'users' table:", {
-        id: session.user.id,
+      if (existingUser) {
+        if (existingUser.username === username) {
+          throw new Error("Username already exists");
+        }
+        if (existingUser.email === email) {
+          throw new Error("Email already exists");
+        }
+      }
+
+      // Sign up user with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        user_type,
-        username,
+        options: {
+          data: {
+            username,
+            user_type
+          }
+        }
       });
-      const { error: insertError } = await supabase
-        .from("users")
-        .insert({ id: session.user.id, email, password, user_type, username });
 
-      if (insertError) {
-        console.error("Registration error: Failed to insert user into 'users' table:", insertError);
-        throw insertError;
+      if (signUpError) {
+        console.error("Signup error:", signUpError);
+        throw new Error("Registration failed: " + signUpError.message);
       }
 
-      console.log("User successfully registered and inserted into 'users' table.");
-      setUser({ ...session.user, user_type, username });
-      return { success: true };
+      if (!data?.user?.id) {
+        throw new Error("Registration failed: No user ID received");
+      }      try {
+        // Insert user into our custom users table
+        const { data: insertData, error: insertError } = await supabase
+          .from("users")
+          .insert({
+            id: data.user.id,
+            email: email,
+            username: username,
+            user_type: user_type,
+            created_at: new Date().toISOString(),
+            password: '**********' // Adding a placeholder since the column is required, but never used
+          });
+
+        if (insertError) {
+          console.error("User insert error:", insertError);
+          // If insertion fails, clean up the auth user
+          await supabase.auth.signOut();
+          throw new Error("Failed to create user profile: " + insertError.message);
+        }
+
+        // Generate a patient ID in format P + YYMMDDxxxx (where xxxx is random)
+        const date = new Date();
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        const newPatientId = `P${year}${month}${day}${random}`.substring(0, 10);
+        
+        // Create a patient record for the user
+        const { data: patientData, error: patientError } = await supabase
+          .from("patients")
+          .insert({
+            patient_id: newPatientId,
+            user_id: data.user.id,  // Link patient to user
+            first_name: username,  // Use username as first name initially
+            last_name: "",        // Empty last name initially
+            age: null            // Age can be updated later
+          })
+          .select()
+          .single();
+
+        if (patientError) {
+          console.error("Patient creation error:", patientError);
+          // If patient creation fails, clean up the user
+          await supabase.auth.signOut();
+          throw new Error("Failed to create patient record: " + patientError.message);
+        }
+
+        // Create initial patient record
+        const { error: recordError } = await supabase
+          .from("patient_records")
+          .insert({
+            patient_id: patientData.patient_id,
+            diagnosis: "New patient registration",
+            treatment: null
+          });
+
+        if (recordError) {
+          console.error("Patient record creation error:", recordError);
+          // If record creation fails, clean up everything
+          await supabase.auth.signOut();
+          throw new Error("Failed to create patient record: " + recordError.message);
+        }
+
+        // Set user state immediately after successful registration
+        setUser({
+          id: data.user.id,
+          username: username,
+          user_type: user_type
+        });
+
+        return { success: true, user_type: user_type };
+      } catch (error) {
+        console.error("User creation error:", error);
+        // If insertion fails, clean up the auth user
+        await supabase.auth.signOut();
+        throw new Error("Failed to complete registration. Please try again.");
+      }
     } catch (error) {
       console.error("Registration error:", error);
-      return { success: false, error: error.message };
+      return {
+        success: false,
+        error: error.message || "Registration failed. Please try again."
+      };
     }
   };
 
