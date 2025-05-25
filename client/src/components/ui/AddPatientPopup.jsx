@@ -75,7 +75,10 @@ const AddPatientPopup = ({ onClose, onSave }) => {
       const errors = validateForm();
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
-        return;      }      if (!isExistingPatient) {
+        return;
+      }
+
+      if (!isExistingPatient) {
         // Generate a patient ID in format P + YYMMDDxxxx (where xxxx is random)
         const date = new Date();
         const year = date.getFullYear().toString().slice(-2);
@@ -83,7 +86,7 @@ const AddPatientPopup = ({ onClose, onSave }) => {
         const day = date.getDate().toString().padStart(2, '0');
         const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
         const newPatientId = `P${year}${month}${day}${random}`.substring(0, 10);
-        
+
         // First, create the patient
         const { data: patientData, error: patientError } = await supabase
           .from("patients")
@@ -98,7 +101,7 @@ const AddPatientPopup = ({ onClose, onSave }) => {
 
         if (patientError) throw patientError;
 
-        // Then create the patient record
+        // Create the patient record with the provided diagnosis
         const { data: recordData, error: recordError } = await supabase
           .from("patient_records")
           .insert({
@@ -111,7 +114,7 @@ const AddPatientPopup = ({ onClose, onSave }) => {
 
         if (recordError) throw recordError;
       } else {
-        // For existing patients, just create the record
+        // For existing patients, just create the record with the provided diagnosis
         const { error: recordError } = await supabase
           .from("patient_records")
           .insert({
@@ -134,31 +137,29 @@ const AddPatientPopup = ({ onClose, onSave }) => {
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-        <h2 className="text-xl font-semibold mb-4">Add New Patient</h2>
-        
+        <h2 className="text-xl font-semibold mb-4">Add Patient Record</h2>
+
         <div className="mb-4">
           <div className="flex space-x-4 mb-4">
             <button
               type="button"
-              className={`px-4 py-2 rounded-md ${
-                isExistingPatient
-                  ? "bg-[#1e5631] text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
+              className={`px-4 py-2 rounded-md ${isExistingPatient
+                ? "bg-[#1e5631] text-white"
+                : "bg-gray-200 text-gray-700"
+                }`}
               onClick={() => setIsExistingPatient(true)}
             >
               Existing Patient
             </button>
             <button
               type="button"
-              className={`px-4 py-2 rounded-md ${
-                !isExistingPatient
-                  ? "bg-[#1e5631] text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
+              className={`px-4 py-2 rounded-md ${!isExistingPatient
+                ? "bg-[#1e5631] text-white"
+                : "bg-gray-200 text-gray-700"
+                }`}
               onClick={() => setIsExistingPatient(false)}
             >
-              New Patient
+              Non-User Patient
             </button>
           </div>
 
@@ -202,9 +203,8 @@ const AddPatientPopup = ({ onClose, onSave }) => {
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className={`mt-1 block w-full border ${
-                    formErrors.firstName ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
+                  className={`mt-1 block w-full border ${formErrors.firstName ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
                 />
                 {formErrors.firstName && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.firstName}</p>
@@ -217,9 +217,8 @@ const AddPatientPopup = ({ onClose, onSave }) => {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className={`mt-1 block w-full border ${
-                    formErrors.lastName ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
+                  className={`mt-1 block w-full border ${formErrors.lastName ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
                 />
                 {formErrors.lastName && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.lastName}</p>
@@ -232,9 +231,8 @@ const AddPatientPopup = ({ onClose, onSave }) => {
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
-                  className={`mt-1 block w-full border ${
-                    formErrors.age ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
+                  className={`mt-1 block w-full border ${formErrors.age ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
                 />
                 {formErrors.age && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.age}</p>
@@ -250,9 +248,8 @@ const AddPatientPopup = ({ onClose, onSave }) => {
             name="diagnosis"
             value={formData.diagnosis}
             onChange={handleChange}
-            className={`mt-1 block w-full border ${
-              formErrors.diagnosis ? "border-red-500" : "border-gray-300"
-            } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
+            className={`mt-1 block w-full border ${formErrors.diagnosis ? "border-red-500" : "border-gray-300"
+              } rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm`}
           />
           {formErrors.diagnosis && (
             <p className="mt-1 text-sm text-red-500">{formErrors.diagnosis}</p>

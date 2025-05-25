@@ -17,8 +17,8 @@ const Auth = ({ type = "login" }) => {
   const isLogin = type === "login";
   const title = isLogin ? "Login to Your Account" : "Create an Account";
   const buttonText = isLogin ? "Login" : "Register";
-  const toggleText = isLogin 
-    ? "Don't have an account? " 
+  const toggleText = isLogin
+    ? "Don't have an account? "
     : "Already have an account? ";
   const toggleLink = isLogin ? "Register" : "Login";
   const toggleUrl = isLogin ? "/register" : "/login";
@@ -35,7 +35,7 @@ const Auth = ({ type = "login" }) => {
 
     if (!formData.username.trim()) {
       errors.username = "Username is required";
-    }    if (!formData.password) {
+    } if (!formData.password) {
       errors.password = "Password is required";
     } else if (formData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
@@ -64,7 +64,8 @@ const Auth = ({ type = "login" }) => {
     setIsSubmitting(true);
 
     try {
-      if (isLogin) {        const { success, error, user_type } = await login(formData.username, formData.password);
+      if (isLogin) {
+        const { success, error, user_type } = await login(formData.username, formData.password);
         if (!success) {
           setFormErrors({ general: error });
         } else {
@@ -75,7 +76,8 @@ const Auth = ({ type = "login" }) => {
           } else {
             setLocation("/user/dashboard");
           }
-        }      } else {
+        }
+      } else {
         // For registration, set default user type as "user"
         // Admin accounts should be created through a different process
         const { success, error, user_type } = await register(
@@ -83,7 +85,10 @@ const Auth = ({ type = "login" }) => {
           formData.password,
           "user",
           formData.username
-        );if (!success) {          if (error.includes("Username already exists")) {
+        );
+
+        if (!success) {
+          if (error.includes("Username already exists")) {
             setFormErrors({ username: "This username is already taken. Please choose another one." });
           } else if (error.includes("Email already")) {
             setFormErrors({ email: "This email is already registered. Please use another email or try logging in." });
@@ -95,14 +100,15 @@ const Auth = ({ type = "login" }) => {
             console.error("Registration error:", error);
             setFormErrors({ general: error });
           }
-          setIsSubmitting(false);
-        } else {          // Registration successful          // Registration successful and user is automatically logged in
+        } else {
+          // After successful registration, redirect based on user type
           if (user_type === 'admin') {
             setLocation("/admin/dashboard");
           } else if (user_type === 'doctor') {
             setLocation("/doctor/dashboard");
           } else {
-            setLocation("/user/dashboard");
+            // For regular users, always redirect to complete profile
+            setLocation("/complete-profile");
           }
         }
       }
@@ -127,15 +133,15 @@ const Auth = ({ type = "login" }) => {
                 <span className="block sm:inline">{formErrors.general}</span>
               </div>
             )}            <div>              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                {isLogin ? "Username or email" : "Username"}
-              </label>
+              {isLogin ? "Username or email" : "Username"}
+            </label>
               <input
                 id="username"
                 name="username"
                 type="text"
-                className={`mt-1 block w-full px-3 py-2 border ${
-                  formErrors.username ? "border-red-500" : "border-gray-300"
-                } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                autoComplete="username"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.username ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
                 value={formData.username}
                 onChange={handleChange}
               />
@@ -152,9 +158,9 @@ const Auth = ({ type = "login" }) => {
                 id="password"
                 name="password"
                 type="password"
-                className={`mt-1 block w-full px-3 py-2 border ${
-                  formErrors.password ? "border-red-500" : "border-gray-300"
-                } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                autoComplete="current-password"
+                className={`mt-1 block w-full px-3 py-2 border ${formErrors.password ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
                 value={formData.password}
                 onChange={handleChange}
               />
@@ -173,9 +179,9 @@ const Auth = ({ type = "login" }) => {
                     id="email"
                     name="email"
                     type="email"
-                    className={`mt-1 block w-full px-3 py-2 border ${
-                      formErrors.email ? "border-red-500" : "border-gray-300"
-                    } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    autoComplete="email"
+                    className={`mt-1 block w-full px-3 py-2 border ${formErrors.email ? "border-red-500" : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
                     value={formData.email}
                     onChange={handleChange}
                   />
@@ -192,9 +198,9 @@ const Auth = ({ type = "login" }) => {
                     id="confirmPassword"
                     name="confirmPassword"
                     type="password"
-                    className={`mt-1 block w-full px-3 py-2 border ${
-                      formErrors.confirmPassword ? "border-red-500" : "border-gray-300"
-                    } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    autoComplete="new-password"
+                    className={`mt-1 block w-full px-3 py-2 border ${formErrors.confirmPassword ? "border-red-500" : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
                     value={formData.confirmPassword}
                     onChange={handleChange}
                   />

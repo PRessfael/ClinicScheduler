@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { format } from "date-fns";
 
 export const useAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Form state with default values
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState("");
-  const [appointmentType, setAppointmentType] = useState("");
   const [provider, setProvider] = useState("");
   const [reason, setReason] = useState("");
   const [formErrors, setFormErrors] = useState({});
@@ -19,7 +19,8 @@ export const useAppointments = () => {
     setLoading(true);
     setError(null);
 
-    try {      const query = supabase
+    try {
+      const query = supabase
         .from("appointments")
         .select(`
           *,
@@ -86,15 +87,16 @@ export const useAppointments = () => {
 
     await fetchAppointments();
   };
+
   // Calendar helper functions
   const getCalendarDays = () => {
     const today = new Date(selectedDate);
     const month = today.getMonth();
     const year = today.getFullYear();
-    
+
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    
+
     return {
       previousMonth: Array.from({ length: firstDay.getDay() }, (_, i) => {
         const day = new Date(year, month, 0 - i).getDate();
@@ -118,31 +120,30 @@ export const useAppointments = () => {
     const slots = [];
     const startHour = 9; // 9 AM
     const endHour = 17; // 5 PM
-    
+
     for (let hour = startHour; hour < endHour; hour++) {
       slots.push({ time: `${hour}:00`, available: true });
       slots.push({ time: `${hour}:30`, available: true });
     }
-    
+
     return slots;
   };
 
   // Form submission handler
   const submitAppointment = async () => {
     const errors = {};
-    
-    if (!appointmentType) errors.appointmentType = 'Please select an appointment type';
+
     if (!selectedDate) errors.date = 'Please select a date';
     if (!selectedTime) errors.time = 'Please select a time';
     if (!reason.trim()) errors.reason = 'Please provide a reason for your visit';
-    
+
     setFormErrors(errors);
-    
+
     if (Object.keys(errors).length === 0) {
       try {
         // Get the current user
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (!user) {
           throw new Error('You must be logged in to make an appointment');
         }
@@ -161,7 +162,9 @@ export const useAppointments = () => {
 
         if (patientError) {
           throw new Error('Could not find your patient record. Please contact support.');
-        }        // Insert into appointment queue first
+        }
+
+        // Insert into appointment queue first
         const { data: queueData, error: queueError } = await supabase
           .from('appointment_queue')
           .insert({
@@ -179,22 +182,21 @@ export const useAppointments = () => {
         const { error } = await supabase
           .from('appointments')
           .insert({
-            appointment_date: appointmentDateTime.toISOString(),
-            appointment_type: appointmentType,
+            date: format(appointmentDateTime, 'yyyy-MM-dd'),
+            time: format(appointmentDateTime, 'HH:mm:ss'),
             doctor_id: provider || null,
             patient_id: patientData.patient_id,
-            queue_id: queueData.queue_id,
-            status: 'pending'
+            status: 'pending',
+            reason: reason.trim()
           });
 
-        if (queueError) throw queueError;
+        if (error) throw error;
 
         // Reset form
-        setAppointmentType('');
         setProvider('');
         setReason('');
-        setSelectedTime(null);
-        
+        setSelectedTime('');
+
         return true;
       } catch (error) {
         console.error('Error submitting appointment:', error);
@@ -202,7 +204,7 @@ export const useAppointments = () => {
         return false;
       }
     }
-    
+
     return false;
   };
 
@@ -221,8 +223,6 @@ export const useAppointments = () => {
     setSelectedDate,
     selectedTime,
     setSelectedTime,
-    appointmentType,
-    setAppointmentType,
     provider,
     setProvider,
     reason,

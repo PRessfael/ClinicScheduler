@@ -7,10 +7,9 @@ import { toast } from "@/hooks/use-toast";
 
 const AppointmentForm = ({
   selectedDate,
+  setSelectedDate,
   selectedTime,
   setSelectedTime,
-  appointmentType,
-  setAppointmentType,
   provider,
   setProvider,
   reason,
@@ -22,6 +21,32 @@ const AppointmentForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [doctors, setDoctors] = useState([]);
 
+  // Generate time slots for the selected date
+  const generateTimeSlots = () => {
+    const slots = [];
+    const startHour = 9; // 9 AM
+    const endHour = 17; // 5 PM
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      const formattedHour = hour.toString().padStart(2, '0');
+      slots.push(`${formattedHour}:00`);
+    }
+
+    return slots;
+  };
+
+  // Get minimum date (today) and maximum date (3 months from now)
+  const getMinDate = () => {
+    const today = new Date();
+    return format(today, 'yyyy-MM-dd');
+  };
+
+  const getMaxDate = () => {
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 3);
+    return format(maxDate, 'yyyy-MM-dd');
+  };
+
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -31,7 +56,7 @@ const AppointmentForm = ({
           .order('name');
 
         if (error) throw error;
-        setDoctors(data);
+        setDoctors(data || []);
       } catch (error) {
         console.error('Error fetching doctors:', error);
         toast({
@@ -46,7 +71,7 @@ const AppointmentForm = ({
   }, []);
 
   const submitAppointment = async () => {
-    if (!selectedDate || !selectedTime || !appointmentType || !reason) {
+    if (!selectedDate || !selectedTime || !reason?.trim()) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -57,16 +82,6 @@ const AppointmentForm = ({
 
     setIsSubmitting(true);
     try {
-      // Create appointment date by combining the selected date and time
-      const [hours, minutes] = selectedTime.match(/(\d+):(\d+)/).slice(1);
-      const appointmentDateTime = new Date(selectedDate);
-      appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('You must be logged in to make an appointment');
-      }
-
       // Get the patient record for the current user
       const { data: patientData, error: patientError } = await supabase
         .from('patients')
@@ -75,42 +90,62 @@ const AppointmentForm = ({
         .single();
 
       if (patientError) {
-        throw new Error('Could not find your patient record. Please contact support.');
-      }      // First, create the appointment
+        throw new Error('Could not find your patient record. Please complete your profile first.');
+      }
+
+      // Format date and time according to PostgreSQL requirements
+      const appointmentDate = new Date(selectedDate);
+      const formattedDate = format(appointmentDate, 'yyyy-MM-dd'); // date type
+      const formattedTime = selectedTime + ':00'; // time without time zone type
+
+      // First create the appointment
       const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
-          date: format(appointmentDateTime, 'yyyy-MM-dd'),
-          time: `${hours}:${minutes}:00`,
-          doctor_id: provider || null,
           patient_id: patientData.patient_id,
-          status: 'pending'
+          doctor_id: provider || null,
+          date: formattedDate,
+          time: formattedTime,
+          status: 'pending',
+          reason: reason.trim()
         })
-        .select()
+        .select('appointment_id')
         .single();
 
-      if (appointmentError) throw appointmentError;
+      if (appointmentError) {
+        console.error('Appointment creation error:', appointmentError);
+        throw new Error('Failed to create appointment. Please try again.');
+      }
 
-      // Then add to appointment queue with the appointment ID
+      // Then create the queue entry
       const { error: queueError } = await supabase
         .from('appointment_queue')
         .insert({
           appointment_id: appointmentData.appointment_id,
-          reason: reason
+          reason: reason.trim()
         });
 
-      if (appointmentError) throw appointmentError;      // Success! Reset form and notify user
+      if (queueError) {
+        // If queue entry fails, we should delete the appointment
+        await supabase
+          .from('appointments')
+          .delete()
+          .eq('appointment_id', appointmentData.appointment_id);
+
+        throw new Error('Failed to queue appointment. Please try again.');
+      }
+
       toast({
         title: "Success",
         description: "Your appointment has been successfully scheduled",
       });
 
-      // Reset form
-      setAppointmentType('');
+      // Reset form state
       setProvider('');
       setReason('');
       setSelectedTime('');
-      
+      setSelectedDate('');
+
       if (onSuccess) onSuccess();
 
     } catch (error) {
@@ -137,29 +172,6 @@ const AppointmentForm = ({
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="apt-type">
-              Appointment Type
-            </label>
-            <select
-              id="apt-type"
-              className={`w-full px-3 py-2 border ${
-                formErrors.appointmentType ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}              value={appointmentType}
-              onChange={(e) => setAppointmentType(e.target.value)}
-            >
-              <option value="">Select appointment type</option>
-              {APPOINTMENT_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            {formErrors.appointmentType && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.appointmentType}</p>
-            )}
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="provider">
               Preferred Provider (Optional)
             </label>
@@ -179,15 +191,56 @@ const AppointmentForm = ({
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="date">
+              Preferred Date
+            </label>
+            <input
+              type="date"
+              id="date"
+              min={getMinDate()}
+              max={getMaxDate()}
+              className={`w-full px-3 py-2 border ${formErrors.date ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+            {formErrors.date && (
+              <p className="mt-1 text-sm text-red-500">{formErrors.date}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="time">
+              Preferred Time
+            </label>
+            <select
+              id="time"
+              className={`w-full px-3 py-2 border ${formErrors.time ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
+              value={selectedTime}
+              onChange={(e) => setSelectedTime(e.target.value)}
+            >
+              <option value="">Select time</option>
+              {generateTimeSlots().map((time) => (
+                <option key={time} value={time}>
+                  {time}
+                </option>
+              ))}
+            </select>
+            {formErrors.time && (
+              <p className="mt-1 text-sm text-red-500">{formErrors.time}</p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="reason">
               Reason for Visit
             </label>
             <textarea
               id="reason"
               rows="3"
-              className={`w-full px-3 py-2 border ${
-                formErrors.reason ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
+              className={`w-full px-3 py-2 border ${formErrors.reason ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
               placeholder="Briefly describe your symptoms or reason for visit"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -201,7 +254,7 @@ const AppointmentForm = ({
             <div className="bg-blue-50 p-3 rounded-md">
               <p className="text-sm text-blue-800 font-medium">Selected Appointment:</p>
               <p className="text-sm text-blue-800">
-                {format(selectedDate, "MMMM d, yyyy")} at {selectedTime}
+                {format(new Date(selectedDate), "MMMM d, yyyy")} at {selectedTime}
               </p>
             </div>
           )}
