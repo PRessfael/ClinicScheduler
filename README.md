@@ -1,3 +1,17 @@
+# Digital Medical Record and Appointment System for University Clinic
+
+This web-based system streamlines appointment scheduling and patient record management for university clinics. It features role-based access for administrators, doctors, and patients, allowing efficient handling of medical appointments, digital records, and patient information.
+
+## Key Features
+- Role-based dashboards (Admin, Doctor, Patient)
+- Appointment booking with time slot management
+- Patient queue tracking and status updates
+- Digital medical record management
+- User profile creation and editing
+- Responsive and user-friendly interface
+
+
+## Updates
 May 25, 2025
 - Updated AppointmentDashboard to support queue entries with approval and cancellation logic.
 - Implemented patient profile management: added Profile and EditProfileForm components.
