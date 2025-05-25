@@ -35,6 +35,18 @@ const AppointmentForm = ({
     return slots;
   };
 
+  // Get minimum date (today) and maximum date (3 months from now)
+  const getMinDate = () => {
+    const today = new Date();
+    return format(today, 'yyyy-MM-dd');
+  };
+
+  const getMaxDate = () => {
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 3);
+    return format(maxDate, 'yyyy-MM-dd');
+  };
+
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -92,7 +104,7 @@ const AppointmentForm = ({
         .insert({
           patient_id: patientData.patient_id,
           doctor_id: provider || null,
-          date: format(appointmentDate, 'yyyy-MM-dd'),
+          date: formattedDate,
           time: formattedTime,
           status: 'pending',
           reason: reason.trim()
@@ -132,6 +144,7 @@ const AppointmentForm = ({
       setProvider('');
       setReason('');
       setSelectedTime('');
+      setSelectedDate('');
 
       if (onSuccess) onSuccess();
 
@@ -175,6 +188,25 @@ const AppointmentForm = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="date">
+              Preferred Date
+            </label>
+            <input
+              type="date"
+              id="date"
+              min={getMinDate()}
+              max={getMaxDate()}
+              className={`w-full px-3 py-2 border ${formErrors.date ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+            {formErrors.date && (
+              <p className="mt-1 text-sm text-red-500">{formErrors.date}</p>
+            )}
           </div>
 
           <div>
@@ -222,7 +254,7 @@ const AppointmentForm = ({
             <div className="bg-blue-50 p-3 rounded-md">
               <p className="text-sm text-blue-800 font-medium">Selected Appointment:</p>
               <p className="text-sm text-blue-800">
-                {format(selectedDate, "MMMM d, yyyy")} at {selectedTime}
+                {format(new Date(selectedDate), "MMMM d, yyyy")} at {selectedTime}
               </p>
             </div>
           )}
