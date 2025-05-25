@@ -11,6 +11,14 @@ const Appointments = () => {
   const [showForm, setShowForm] = useState(false);
   const [hasPatientProfile, setHasPatientProfile] = useState(true);
 
+  // Add state for appointment form
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState("");
+  const [appointmentType, setAppointmentType] = useState("");
+  const [provider, setProvider] = useState("");
+  const [reason, setReason] = useState("");
+  const [formErrors, setFormErrors] = useState({});
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -61,6 +69,17 @@ const Appointments = () => {
     }
   }, [user]);
 
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    // Reset form state
+    setSelectedDate(new Date());
+    setSelectedTime("");
+    setAppointmentType("");
+    setProvider("");
+    setReason("");
+    setFormErrors({});
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -108,15 +127,15 @@ const Appointments = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {appointments.map((appointment) => (
-                    <tr key={appointment.id}>
+                    <tr key={appointment.appointment_id}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {new Date(appointment.appointment_date).toLocaleString()}
+                        {new Date(appointment.date).toLocaleDateString()} {appointment.time}
                       </td>
                       <td className="px-6 py-4">
-                        {appointment.doctors?.name}
-                        {appointment.doctors?.specialty && (
+                        {appointment.doctor?.name}
+                        {appointment.doctor?.specialty && (
                           <span className="text-gray-500 text-sm block">
-                            {appointment.doctors.specialty}
+                            {appointment.doctor.specialty}
                           </span>
                         )}
                       </td>
@@ -149,7 +168,37 @@ const Appointments = () => {
       </div>
 
       {showForm && (
-        <AppointmentForm onClose={() => setShowForm(false)} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Book Appointment</h2>
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <AppointmentForm
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                selectedTime={selectedTime}
+                setSelectedTime={setSelectedTime}
+                appointmentType={appointmentType}
+                setAppointmentType={setAppointmentType}
+                provider={provider}
+                setProvider={setProvider}
+                reason={reason}
+                setReason={setReason}
+                formErrors={formErrors}
+                onSuccess={handleFormSuccess}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
