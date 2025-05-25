@@ -3,7 +3,8 @@ import { Link, useLocation } from "wouter";
 import MobileMenu from "./MobileMenu";
 import { useAuth } from "../../hooks/useAuth";
 
-const Navbar = () => {  const [location, setLocation] = useLocation();
+const Navbar = () => {
+  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout, isAdmin } = useAuth();
 
@@ -18,13 +19,13 @@ const Navbar = () => {  const [location, setLocation] = useLocation();
   ];
   if (user) {
     // Add dashboard link based on user type
-    const dashboardPath = user.user_type === "admin" 
-      ? "/admin/dashboard" 
+    const dashboardPath = user.user_type === "admin"
+      ? "/admin/dashboard"
       : user.user_type === "doctor"
-      ? "/doctor/dashboard"
-      : "/user/dashboard";
+        ? "/doctor/dashboard"
+        : "/user/dashboard";
     navLinks.push({ href: dashboardPath, label: "Dashboard" });
-    
+
     if (user.user_type === "admin") {
       // Admin-specific links
       navLinks.push({ href: "/appointment-dashboard", label: "Appointment Dashboard" });
@@ -66,13 +67,11 @@ const Navbar = () => {  const [location, setLocation] = useLocation();
             <Link
               key={link.href}
               href={link.href}
-              className={`text-white${
-                location !== link.href ? "/90 hover:text-white text-white" : ""
-              } font-medium px-2 py-1 ${
-                location === link.href
+              className={`text-white${location !== link.href ? "/90 hover:text-white text-white" : ""
+                } font-medium px-2 py-1 ${location === link.href
                   ? "border-b-2 border-white"
                   : "hover:border-b-2 hover:border-white transition-all"
-              }`}
+                }`}
             >
               {link.label}
             </Link>
@@ -81,9 +80,12 @@ const Navbar = () => {  const [location, setLocation] = useLocation();
           <div className="flex space-x-2 ml-4">
             {user ? (
               <>
-                <div className="text-white px-4 py-1.5 font-medium">
-                  Welcome, {user.username}
-                </div>
+                <Link
+                  href="/profile"
+                  className="text-white px-4 py-1.5 font-medium hover:text-[#ffd700] transition-colors"
+                >
+                  Profile
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="bg-[#ffd700] text-[#1e5631] px-4 py-1.5 rounded-md font-semibold hover:bg-[#ffff52] transition-colors"
@@ -130,10 +132,10 @@ const Navbar = () => {  const [location, setLocation] = useLocation();
       </div>
 
       {/* Mobile Navigation */}
-      <MobileMenu 
-        isOpen={mobileMenuOpen} 
-        currentPath={location} 
-        user={user} 
+      <MobileMenu
+        isOpen={mobileMenuOpen}
+        currentPath={location}
+        user={user}
         logout={handleLogout}
         navLinks={navLinks}
       />

@@ -14,18 +14,17 @@ const AppointmentDashboard = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('appointment_queue')
+        .from('appointments')
         .select(`
-          queue_id,
+          appointment_id,
           appointment_date,
           status,
           reason,
           patient_id,
-          appointment:appointments (
-            appointment_id,
-            doctor:doctor_id (
-              username
-            )
+          doctor:doctors!appointments_doctor_id_fkey (
+            doctor_id,
+            name,
+            specialty
           )
         `)
         .eq('status', 'waiting')
@@ -35,16 +34,16 @@ const AppointmentDashboard = () => {
         throw error;
       }
 
-      const formattedData = data.map(queue => ({
-        appointment_id: queue.appointment?.appointment_id,
-        date: new Date(queue.appointment_date).toISOString().split('T')[0],
-        time: new Date(queue.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: queue.status,
-        doctors: { name: queue.appointment?.doctor?.username || 'Not assigned' },
-        appointment_queue: {
-          queue_id: queue.queue_id,
-          reason: queue.reason
-        }
+      const formattedData = data.map(appointment => ({
+        appointment_id: appointment.appointment_id,
+        date: new Date(appointment.appointment_date).toISOString().split('T')[0],
+        time: new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: appointment.status,
+        doctors: {
+          name: appointment.doctor?.name || 'Not assigned',
+          specialty: appointment.doctor?.specialty || 'N/A'
+        },
+        reason: appointment.reason
       }));
 
       setQueuedAppointments(formattedData);
@@ -80,6 +79,9 @@ const AppointmentDashboard = () => {
                 Doctor
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Specialty
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -89,9 +91,9 @@ const AppointmentDashboard = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {queuedAppointments.map((appointment) => (
-              <tr key={appointment.appointment_queue.queue_id}>
+              <tr key={appointment.appointment_id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {appointment.appointment_queue.queue_id}
+                  {appointment.appointment_id}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {format(new Date(appointment.date), 'MMM d, yyyy')} at{' '}
@@ -100,19 +102,21 @@ const AppointmentDashboard = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {appointment.doctors?.name || 'Not assigned'}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {appointment.doctors?.specialty || 'N/A'}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    appointment.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : appointment.status === 'confirmed'
+                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${appointment.status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : appointment.status === 'confirmed'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}>
+                    }`}>
                     {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {appointment.appointment_queue.reason}
+                  {appointment.reason}
                 </td>
               </tr>
             ))}

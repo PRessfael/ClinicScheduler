@@ -1,8 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient.ts";
-import { Toaster } from "@/components/ui/toaster";
-import { ToastProvider } from "@/components/ui/toast";
+import { ToastProvider } from "@/components/ui/Toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Home from "@/pages/Home";
@@ -14,12 +13,13 @@ import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import UserDashboard from "@/pages/user/Dashboard";
 import DoctorDashboard from "@/pages/doctor/Dashboard";
+import Profile from "@/pages/Profile";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { UserRoute, AdminRoute, ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 function Dashboard() {
   const { user, isAdmin, isDoctor } = useAuth();
-  
+
   if (!user) {
     return <Redirect to="/login" />;
   }
@@ -35,7 +35,7 @@ function Dashboard() {
 
 function Router() {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -59,12 +59,17 @@ function Router() {
           <Route path="/user/dashboard" component={UserDashboard} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
           <Route path="/doctor/dashboard" component={DoctorDashboard} />
+          <Route path="/profile">
+            <ProtectedRoute component={Profile} />
+          </Route>
           <Route path="/appointments">
             <UserRoute component={Appointments} />
-          </Route>          <Route path="/appointment-dashboard">
+          </Route>
+          <Route path="/appointment-dashboard">
             <ProtectedRoute component={AppointmentDashboard} adminOnly={false} />
           </Route>
-          <Route path="/contact" component={Contact} />          <Route path="/login">
+          <Route path="/contact" component={Contact} />
+          <Route path="/login">
             {user ? <Dashboard /> : <Auth type="login" />}
           </Route>
           <Route path="/register">
@@ -78,15 +83,16 @@ function Router() {
   );
 }
 
-function App() {
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router />
-        <Toaster />
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <Router />
+        </AuthProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
-}
+};
 
 export default App;
