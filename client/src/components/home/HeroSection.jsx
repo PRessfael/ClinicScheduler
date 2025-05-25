@@ -8,10 +8,9 @@ const HeroSection = () => {
       </h1>
       <p className="text-lg text-gray-600 mb-8">
         Book appointments, access records, and get medical help with ease.
-      </p>
-      <div className="flex flex-col sm:flex-row justify-center gap-4">
+      </p>      <div className="flex flex-col sm:flex-row justify-center gap-4">
         <Link
-          href="/appointments"
+          href="/register"
           className="bg-[#4caf50] hover:bg-[#087f23] text-white font-semibold px-6 py-3 rounded-md transition-colors text-center"
         >
           Get Started

@@ -73,27 +73,24 @@ export const CLINIC_HOURS = [
   { day: "Monday - Friday", hours: "8:00 AM - 6:00 PM" },
   { day: "Saturday", hours: "9:00 AM - 2:00 PM" },
   { day: "Sunday", hours: "Closed" },
-  { day: "Emergency Line", hours: "Available 24/7" },
 ];
 
 export const APPOINTMENT_TYPES = [
-  { value: "routine", label: "Routine Check-up" },
+  { value: "checkup", label: "Regular Check-up" },
+  { value: "followup", label: "Follow-up Visit" },
+  { value: "consultation", label: "Consultation" },
   { value: "urgent", label: "Urgent Care" },
-  { value: "vaccination", label: "Vaccination" },
-  { value: "counseling", label: "Mental Health Counseling" },
-  { value: "lab", label: "Laboratory Services" },
 ];
 
 export const PROVIDERS = [
   { value: "dr-smith", label: "Dr. Smith" },
-  { value: "dr-johnson", label: "Dr. Johnson" },
+  { value: "dr-jones", label: "Dr. Jones" },
   { value: "dr-williams", label: "Dr. Williams" },
-  { value: "nurse-davis", label: "Nurse Davis" },
 ];
 
 export const APPOINTMENT_GUIDELINES = [
   "Please arrive 15 minutes before your scheduled appointment time.",
-  "Bring your university ID and insurance card.",
+  "Bring your university ID.",
   "Cancellations should be made at least 24 hours in advance.",
   "If you're experiencing severe symptoms, please visit the emergency room instead.",
 ];

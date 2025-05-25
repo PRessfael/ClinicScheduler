@@ -53,11 +53,36 @@ const AdminDashboard = () => {
   const handleAddPatient = () => {
     setIsAddPatientPopupOpen(true);
   };
+  const refreshStats = async () => {
+    try {
+      const [
+        { count: patientsCount }, 
+        { count: totalAppCount }, 
+        { count: pendingCount }, 
+        { count: completedCount }
+      ] = await Promise.all([
+        supabase.from("patients").select("*", { count: "exact" }),
+        supabase.from("appointments").select("*", { count: "exact" }),
+        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "pending"),
+        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "completed")
+      ]);
+
+      setStats({
+        totalPatients: patientsCount || 0,
+        totalAppointments: totalAppCount || 0,
+        pendingAppointments: pendingCount || 0,
+        completedAppointments: completedCount || 0
+      });
+    } catch (error) {
+      console.error("Error refreshing stats:", error);
+    }
+  };
 
   const handleAddPatientSave = () => {
     setIsAddPatientPopupOpen(false);
-    // Re-fetch patients to include the newly added patient
+    // Re-fetch both patients and stats
     fetchPatients();
+    refreshStats();
   };
 
   const handleDeleteConfirm = async () => {
@@ -99,102 +124,9 @@ const AdminDashboard = () => {
     fetchPatients();
   }, []);
   
-//fetch total patients
+  // Fetch all stats on component mount
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { count, error } = await supabase
-          .from("users")
-          .select("id", { count: "exact" });
-
-        if (error) throw error;
-
-        setStats(prevStats => ({
-          ...prevStats,
-          totalPatients: count || 0,
-        }));
-      } catch (error) {
-        console.error("Error fetching total patients:", error);
-      }
-    };
-
-    fetchStats();
-  }, []);
-//fetch total appointments
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const { count: totalCount, error: totalError } = await supabase
-          .from("appointments")
-          .select("appointment_id", { count: "exact" });
-
-        if (totalError) throw totalError;
-
-        console.log("Total Appointments Query Result:", totalCount);
-
-        const { count: pendingCount, error: pendingError } = await supabase
-          .from("appointment_queue")
-          .select("queue_id", { count: "exact" });
-
-        if (pendingError) throw pendingError;
-
-        console.log("Pending Appointments Query Result:", pendingCount);
-
-        setStats(prevStats => ({
-          ...prevStats,
-          totalAppointments: (totalCount || 0) + (pendingCount || 0),
-        }));
-      } catch (error) {
-        console.error("Error fetching total appointments including pending:", error);
-      }
-    };
-
-    fetchAppointments();
-  }, []);
-
-//fetch pending appointments
-  useEffect(() => {
-    const fetchPendingAppointments = async () => {
-      try {
-        const { count, error } = await supabase
-          .from("appointment_queue")
-          .select("queue_id", { count: "exact" });
-
-        if (error) throw error;
-
-        setStats(prevStats => ({
-          ...prevStats,
-          pendingAppointments: count || 0,
-        }));
-      } catch (error) {
-        console.error("Error fetching pending appointments:", error);
-      }
-    };
-
-    fetchPendingAppointments();
-  }, []);
-
-//fetch completed appointments
-  useEffect(() => {
-    const fetchCompletedAppointments = async () => {
-      try {
-        const { count, error } = await supabase
-          .from("appointments")
-          .select("id", { count: "exact" })
-          .eq("status", "completed");
-
-        if (error) throw error;
-
-        setStats(prevStats => ({
-          ...prevStats,
-          completedAppointments: count || 0,
-        }));
-      } catch (error) {
-        console.error("Error fetching completed appointments:", error);
-      }
-    };
-
-    fetchCompletedAppointments();
+    refreshStats();
   }, []);
 
   //---------------------------------//
@@ -338,15 +270,17 @@ const AdminDashboard = () => {
       )}
       {deletingPatient && (
         <DeleteWarning
-          message={`Are you sure you want to delete ${deletingPatient.name}?`}
+          message={`Are you sure you want to delete ${deletingPatient.name} record?`}
           onCancel={() => setDeletingPatient(null)}
           onConfirm={handleDeleteConfirm}
         />
-      )}
-      {isAddPatientPopupOpen && (
+      )}      {isAddPatientPopupOpen && (
         <AddPatientPopup
           onClose={() => setIsAddPatientPopupOpen(false)}
-          onSave={handleAddPatientSave}
+          onSave={() => {
+            handleAddPatientSave();
+            refreshStats();
+          }}
         />
       )}
     </div>
