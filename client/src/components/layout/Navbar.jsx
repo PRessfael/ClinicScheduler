@@ -28,14 +28,14 @@ const Navbar = () => {
 
     if (user.user_type === "admin") {
       // Admin-specific links
-      navLinks.push({ href: "/appointment-dashboard", label: "Appointment Dashboard" });
+      navLinks.push({ href: "/appointment-dashboard", label: "Appointments" });
     } else if (user.user_type === "doctor") {
       // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
         { href: "/contact", label: "Contact Us" },
-        { href: "/doctor/dashboard", label: "Dashboard" },
-        { href: "/appointment-dashboard", label: "Appointment Dashboard" },
+        { href: "/doctor/dashboard", label: "Clinic Dashboard" },
+        { href: "/appointment-dashboard", label: "Appointments" },
       ];
     } else {
       // Regular user links

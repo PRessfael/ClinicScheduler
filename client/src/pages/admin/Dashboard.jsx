@@ -12,7 +12,8 @@ const AdminDashboard = () => {
     totalPatients: 0,
     totalAppointments: 0,
     pendingAppointments: 0,
-    completedAppointments: 0
+    confirmedAppointments: 0,
+    cancelledAppointments: 0
   });
   const [patients, setPatients] = useState([]);
   const [editingPatient, setEditingPatient] = useState(null);
@@ -225,16 +226,16 @@ const AdminDashboard = () => {
       const { count, error } = await supabase
         .from("appointments")
         .select("appointment_id", { count: "exact" })
-        .eq("status", "completed");
+        .eq("status", "confirmed");
 
       if (error) throw error;
 
       setStats(prevStats => ({
         ...prevStats,
-        completedAppointments: count || 0,
+        confirmedAppointments: count || 0,
       }));
     } catch (error) {
-      console.error("Error fetching completed appointments:", error);
+      console.error("Error fetching confirmed appointments:", error);
     }
   };
 
@@ -250,15 +251,64 @@ const AdminDashboard = () => {
   };
 
   const updateAllStats = async () => {
-    await Promise.all([
-      fetchStats(),
-      fetchAppointments(),
-      fetchPendingAppointments(),
-      fetchCompletedAppointments()
-    ]).catch(error => {
+    try {
+      // Get total patients count
+      const { count: patientsCount, error: patientsError } = await supabase
+        .from("patient_records")
+        .select("record_id", { count: "exact" });
+
+      if (patientsError) throw patientsError;
+
+      // Get appointments with different statuses
+      const [
+        { count: pendingCount },
+        { count: confirmedCount },
+        { count: cancelledCount }
+      ] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select("appointment_id", { count: "exact" })
+          .eq("status", "pending"),
+        supabase
+          .from("appointments")
+          .select("appointment_id", { count: "exact" })
+          .eq("status", "confirmed"),
+        supabase
+          .from("appointments")
+          .select("appointment_id", { count: "exact" })
+          .eq("status", "cancelled")
+      ]);
+
+      // Get queue entries (these are also pending appointments)
+      const { count: queueCount, error: queueError } = await supabase
+        .from("appointment_queue")
+        .select("queue_id", { count: "exact" });
+
+      if (queueError) throw queueError;
+
+      // Calculate total appointments including queue entries
+      const totalPendingAppointments = (pendingCount || 0) + (queueCount || 0);
+      const totalAppointments =
+        (pendingCount || 0) +
+        (confirmedCount || 0) +
+        (cancelledCount || 0) +
+        (queueCount || 0);
+
+      setStats({
+        totalPatients: patientsCount || 0,
+        totalAppointments,
+        pendingAppointments: totalPendingAppointments,
+        confirmedAppointments: confirmedCount || 0,
+        cancelledAppointments: cancelledCount || 0
+      });
+    } catch (error) {
       console.error("Error updating stats:", error);
-    });
+    }
   };
+
+  useEffect(() => {
+    updateAllStats();
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -275,17 +325,26 @@ const AdminDashboard = () => {
           <h3 className="text-gray-500 text-sm font-semibold mb-1">TOTAL PATIENTS</h3>
           <p className="text-3xl font-bold text-gray-800">{stats.totalPatients}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-[#ffd700]">
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
           <h3 className="text-gray-500 text-sm font-semibold mb-1">TOTAL APPOINTMENTS</h3>
           <p className="text-3xl font-bold text-gray-800">{stats.totalAppointments}</p>
+          <div className="mt-2 text-sm">
+            <span className="text-blue-600">Active: {stats.confirmedAppointments + stats.pendingAppointments}</span>
+          </div>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
           <h3 className="text-gray-500 text-sm font-semibold mb-1">PENDING APPOINTMENTS</h3>
           <p className="text-3xl font-bold text-gray-800">{stats.pendingAppointments}</p>
+          <div className="mt-2 text-sm">
+            <span className="text-yellow-600">Awaiting Approval</span>
+          </div>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-          <h3 className="text-gray-500 text-sm font-semibold mb-1">COMPLETED APPOINTMENTS</h3>
-          <p className="text-3xl font-bold text-gray-800">{stats.completedAppointments}</p>
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+          <h3 className="text-gray-500 text-sm font-semibold mb-1">CONFIRMED</h3>
+          <p className="text-3xl font-bold text-gray-800">{stats.confirmedAppointments}</p>
+          <div className="mt-2 text-sm text-red-600">
+            Cancelled: {stats.cancelledAppointments}
+          </div>
         </div>
       </div>
 
