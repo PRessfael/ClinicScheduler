@@ -9,46 +9,46 @@ const AppointmentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchQueue = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('appointment_queue')
-          .select(`
-            queue_id,
+  const fetchQueue = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('appointment_queue')
+        .select(`
+          queue_id,
+          appointment_id,
+          reason,
+          appointment:appointments(
             appointment_id,
-            reason,
-            appointment:appointments(
-              appointment_id,
-              patient_id,
+            patient_id,
+            doctor_id,
+            date,
+            time,
+            status,
+            doctor:doctors(
               doctor_id,
-              date,
-              time,
-              status,
-              doctor:doctors(
-                doctor_id,
-                name,
-                specialty
-              ),
-              patient:patients(
-                patient_id,
-                first_name,
-                last_name
-              )
+              name,
+              specialty
+            ),
+            patient:patients(
+              patient_id,
+              first_name,
+              last_name
             )
-          `)
-          .order('queue_id', { ascending: true });
+          )
+        `)
+        .order('queue_id', { ascending: true });
 
-        if (error) throw error;
-        setQueue(data || []);
-      } catch (error) {
-        console.error("Error fetching queue:", error);
-        setError('Failed to load appointment queue. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (error) throw error;
+      setQueue(data || []);
+    } catch (error) {
+      console.error("Error fetching queue:", error);
+      setError('Failed to load appointment queue. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchQueue();
   }, []);
 

@@ -10,8 +10,6 @@ const AppointmentForm = ({
   setSelectedDate,
   selectedTime,
   setSelectedTime,
-  appointmentType,
-  setAppointmentType,
   provider,
   setProvider,
   reason,
@@ -94,7 +92,7 @@ const AppointmentForm = ({
         .insert({
           patient_id: patientData.patient_id,
           doctor_id: provider || null,
-          date: formattedDate,
+          date: format(appointmentDate, 'yyyy-MM-dd'),
           time: formattedTime,
           status: 'pending',
           reason: reason.trim()
@@ -130,6 +128,11 @@ const AppointmentForm = ({
         description: "Your appointment has been successfully scheduled",
       });
 
+      // Reset form state
+      setProvider('');
+      setReason('');
+      setSelectedTime('');
+
       if (onSuccess) onSuccess();
 
     } catch (error) {
@@ -155,29 +158,6 @@ const AppointmentForm = ({
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="apt-type">
-              Appointment Type
-            </label>
-            <select
-              id="apt-type"
-              className={`w-full px-3 py-2 border ${formErrors.appointmentType ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
-              value={appointmentType}
-              onChange={(e) => setAppointmentType(e.target.value)}
-            >
-              <option value="">Select appointment type</option>
-              {APPOINTMENT_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            {formErrors.appointmentType && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.appointmentType}</p>
-            )}
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="provider">
               Preferred Provider (Optional)

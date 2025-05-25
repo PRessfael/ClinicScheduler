@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import AppointmentForm from "@/components/appointments/AppointmentForm";
 import PatientProfileWarning from "@/components/ui/PatientProfileWarning";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
+import { useAppointments } from "@/hooks/useAppointments";
 
 const Appointments = () => {
   const { user } = useAuth();
@@ -12,40 +13,54 @@ const Appointments = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
+  const {
+    selectedDate,
+    setSelectedDate,
+    selectedTime,
+    setSelectedTime,
+    appointmentType,
+    setAppointmentType,
+    provider,
+    setProvider,
+    reason,
+    setReason,
+    formErrors,
+  } = useAppointments();
+
+  const fetchAppointments = async () => {
+    if (!hasPatientProfile || !patientProfile?.patient_id) {
+      setAppointments([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from("appointments")
+        .select(`
+          appointment_id,
+          date,
+          time,
+          status,
+          reason,
+          doctor:doctors(
+            name,
+            specialty
+          )
+        `)
+        .eq("patient_id", patientProfile.patient_id)
+        .order("date", { ascending: true });
+
+      if (appointmentsError) throw appointmentsError;
+      setAppointments(appointmentsData);
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!hasPatientProfile || !patientProfile?.patient_id) {
-        setAppointments([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data: appointmentsData, error: appointmentsError } = await supabase
-          .from("appointments")
-          .select(`
-            appointment_id,
-            date,
-            time,
-            status,
-            reason,
-            doctor:doctors(
-              name,
-              specialty
-            )
-          `)
-          .eq("patient_id", patientProfile.patient_id)
-          .order("date", { ascending: true });
-
-        if (appointmentsError) throw appointmentsError;
-        setAppointments(appointmentsData);
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAppointments();
   }, [hasPatientProfile, patientProfile]);
 
@@ -77,8 +92,15 @@ const Appointments = () => {
         <>
           {showForm && (
             <AppointmentForm
-              patientId={patientProfile.patient_id}
-              onClose={() => setShowForm(false)}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              selectedTime={selectedTime}
+              setSelectedTime={setSelectedTime}
+              provider={provider}
+              setProvider={setProvider}
+              reason={reason}
+              setReason={setReason}
+              formErrors={formErrors}
               onSuccess={() => {
                 setShowForm(false);
                 fetchAppointments();
@@ -125,10 +147,10 @@ const Appointments = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${appointment.status === "confirmed"
-                            ? "bg-green-100 text-green-800"
-                            : appointment.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
+                          ? "bg-green-100 text-green-800"
+                          : appointment.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
                           }`}>
                           {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                         </span>
