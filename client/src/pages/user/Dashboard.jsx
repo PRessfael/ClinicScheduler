@@ -52,12 +52,24 @@ const UserDashboard = () => {
           .select(`
             record_id,
             diagnosis,
-            treatment
+            treatment,
+            doctors (
+              name,
+              specialty
+            )
           `)
           .eq("patient_id", patientId)
           .order("record_id", { ascending: false });
 
         if (recordsError) throw recordsError;
+
+        // Format records data to include doctor information
+        const formattedRecords = recordsData.map(record => ({
+          record_id: record.record_id,
+          diagnosis: record.diagnosis,
+          treatment: record.treatment,
+          doctor: record.doctors ? `${record.doctors.name} (${record.doctors.specialty})` : 'Not Assigned'
+        }));
 
         // Fetch pending appointments
         const [appointmentsResponse, queueResponse] = await Promise.all([
@@ -90,7 +102,6 @@ const UserDashboard = () => {
                 appointment_id,
                 date,
                 time,
-                patient_id,
                 doctors (
                   name,
                   specialty
@@ -117,7 +128,7 @@ const UserDashboard = () => {
           }))
         ];
 
-        setRecords(recordsData || []);
+        setRecords(formattedRecords);
         setPendingAppointments(pendingAppts);
       } catch (error) {
         console.error("Error fetching data:", error);
