@@ -18,10 +18,12 @@ const AdminDashboard = () => {
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
-  const [isAddPatientPopupOpen, setIsAddPatientPopupOpen] = useState(false); const [currentPage, setCurrentPage] = useState(1);
+  const [isAddPatientPopupOpen, setIsAddPatientPopupOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [patientsPerPage] = useState(5);
   const [totalRecords, setTotalRecords] = useState(0);
   const totalPages = Math.ceil(totalRecords / patientsPerPage);
+
   const deletePatient = async (recordId) => {
     if (!recordId) {
       console.error("Invalid record ID provided for deletion.");
@@ -89,9 +91,12 @@ const AdminDashboard = () => {
     );
     setEditingPatient(null);
   };
+
   const handleAddPatient = () => {
     setIsAddPatientPopupOpen(true);
-  }; const handleAddPatientSave = () => {
+  };
+
+  const handleAddPatientSave = () => {
     setIsAddPatientPopupOpen(false);
     // Re-fetch patients and update all stats
     fetchPatients();
@@ -103,7 +108,9 @@ const AdminDashboard = () => {
       await deletePatient(deletingPatient.id);
       setDeletingPatient(null);
     }
-  }; const fetchPatients = async () => {
+  };
+
+  const fetchPatients = async () => {
     try {
       const from = (currentPage - 1) * patientsPerPage;
       const to = from + patientsPerPage - 1;
@@ -135,9 +142,12 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error("Error fetching patient records:", error);
     }
-  }; useEffect(() => {
+  };
+
+  useEffect(() => {
     fetchPatients();
   }, [currentPage]);
+
   const fetchStats = async () => {
     try {
       const { count, error } = await supabase
@@ -159,6 +169,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchStats();
   }, []);
+
   const fetchAppointments = async () => {
     try {
       const { count: totalCount, error: totalError } = await supabase
@@ -187,6 +198,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchAppointments();
   }, []);
+
   const fetchPendingAppointments = async () => {
     try {
       const { count, error } = await supabase
@@ -207,6 +219,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchPendingAppointments();
   }, []);
+
   const fetchCompletedAppointments = async () => {
     try {
       const { count, error } = await supabase
@@ -247,7 +260,6 @@ const AdminDashboard = () => {
     });
   };
 
-  //---------------------------------//
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -328,7 +340,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         className="text-[#1e5631] hover:text-[#0d401d] mr-3"
-                        onClick={() => setViewingPatient(patient)}
+                        onClick={() => setViewingPatient(patient.id)}
                       >
                         View
                       </button>
@@ -357,11 +369,13 @@ const AdminDashboard = () => {
             >
               New Patient Record
             </button>
-            <div className="flex items-center">            <div className="text-sm text-gray-700 mr-4">
-              Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
-              <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span> of{" "}
-              <span className="font-medium">{totalRecords}</span> patients
-            </div>              <div className="flex space-x-2">
+            <div className="flex items-center">
+              <div className="text-sm text-gray-700 mr-4">
+                Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
+                <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span> of{" "}
+                <span className="font-medium">{totalRecords}</span> patients
+              </div>
+              <div className="flex space-x-2">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -387,6 +401,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
       {editingPatient && (
         <EditPatientPopup
           patient={editingPatient}
@@ -396,7 +411,7 @@ const AdminDashboard = () => {
       )}
       {viewingPatient && (
         <ViewPatientDetails
-          patient={viewingPatient}
+          recordId={viewingPatient}
           onClose={() => setViewingPatient(null)}
         />
       )}
@@ -406,7 +421,8 @@ const AdminDashboard = () => {
           onCancel={() => setDeletingPatient(null)}
           onConfirm={handleDeleteConfirm}
         />
-      )}      {isAddPatientPopupOpen && (
+      )}
+      {isAddPatientPopupOpen && (
         <AddPatientPopup
           onClose={() => setIsAddPatientPopupOpen(false)}
           onSave={handleAddPatientSave}
