@@ -132,11 +132,17 @@ const Appointments = () => {
                         {new Date(appointment.date).toLocaleDateString()} {appointment.time}
                       </td>
                       <td className="px-6 py-4">
-                        {appointment.doctor?.name}
-                        {appointment.doctor?.specialty && (
-                          <span className="text-gray-500 text-sm block">
-                            {appointment.doctor.specialty}
-                          </span>
+                        {appointment.doctor?.name ? (
+                          <>
+                            {appointment.doctor.name}
+                            {appointment.doctor.specialty && (
+                              <span className="text-gray-500 text-sm block">
+                                {appointment.doctor.specialty}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-gray-500">No preference</span>
                         )}
                       </td>
                       <td className="px-6 py-4">

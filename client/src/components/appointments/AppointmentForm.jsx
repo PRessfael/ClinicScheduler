@@ -93,7 +93,7 @@ const AppointmentForm = ({
         .from('appointments')
         .insert({
           patient_id: patientData.patient_id,
-          doctor_id: provider || "no preference",
+          doctor_id: provider || null,
           date: formattedDate,
           time: formattedTime,
           status: 'pending',
@@ -186,7 +186,7 @@ const AppointmentForm = ({
               id="provider"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
               value={provider}
-              onChange={(e) => setProvider(e.target.value || "no preference")}
+              onChange={(e) => setProvider(e.target.value)}
             >
               <option value="">No preference</option>
               {doctors.map((doctor) => (
