@@ -14,6 +14,10 @@ const ViewPatientDetails = ({ recordId, onClose }) => {
             record_id,
             diagnosis,
             treatment,
+            doctors (
+              name,
+              specialty
+            ),
             patients(patient_id, first_name, last_name, age)
           `)
           .eq("record_id", recordId)
@@ -25,7 +29,8 @@ const ViewPatientDetails = ({ recordId, onClose }) => {
           name: `${data.patients.first_name} ${data.patients.last_name}`,
           age: data.patients.age,
           condition: data.diagnosis,
-          treatment: data.treatment
+          treatment: data.treatment,
+          doctor: data.doctors ? `${data.doctors.name} (${data.doctors.specialty})` : 'Not Assigned'
         });
       } catch (error) {
         console.error("Error fetching patient details:", error);
@@ -83,6 +88,10 @@ const ViewPatientDetails = ({ recordId, onClose }) => {
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700">Treatment</label>
           <p className="text-gray-900">{patient.treatment || "N/A"}</p>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">Assigned Doctor</label>
+          <p className="text-gray-900">{patient.doctor}</p>
         </div>
         <div className="flex justify-end">
           <button
