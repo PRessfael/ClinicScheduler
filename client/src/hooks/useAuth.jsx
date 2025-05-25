@@ -99,9 +99,8 @@ export const AuthProvider = ({ children }) => {
         .from("users")
         .select("username, email")
         .or(`username.eq.${username},email.eq.${email}`)
-        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no user found
+        .maybeSingle();
 
-      // Only throw if there's an error and it's not a "no rows" error
       if (checkError) {
         console.error("User check error:", checkError);
         throw new Error("Failed to check existing user");
@@ -135,9 +134,11 @@ export const AuthProvider = ({ children }) => {
 
       if (!data?.user?.id) {
         throw new Error("Registration failed: No user ID received");
-      }      try {
+      }
+
+      try {
         // Insert user into our custom users table
-        const { data: insertData, error: insertError } = await supabase
+        const { error: insertError } = await supabase
           .from("users")
           .insert({
             id: data.user.id,
@@ -153,50 +154,6 @@ export const AuthProvider = ({ children }) => {
           // If insertion fails, clean up the auth user
           await supabase.auth.signOut();
           throw new Error("Failed to create user profile: " + insertError.message);
-        }
-
-        // Generate a patient ID in format P + YYMMDDxxxx (where xxxx is random)
-        const date = new Date();
-        const year = date.getFullYear().toString().slice(-2);
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-        const newPatientId = `P${year}${month}${day}${random}`.substring(0, 10);
-        
-        // Create a patient record for the user
-        const { data: patientData, error: patientError } = await supabase
-          .from("patients")
-          .insert({
-            patient_id: newPatientId,
-            user_id: data.user.id,  // Link patient to user
-            first_name: username,  // Use username as first name initially
-            last_name: "",        // Empty last name initially
-            age: null            // Age can be updated later
-          })
-          .select()
-          .single();
-
-        if (patientError) {
-          console.error("Patient creation error:", patientError);
-          // If patient creation fails, clean up the user
-          await supabase.auth.signOut();
-          throw new Error("Failed to create patient record: " + patientError.message);
-        }
-
-        // Create initial patient record
-        const { error: recordError } = await supabase
-          .from("patient_records")
-          .insert({
-            patient_id: patientData.patient_id,
-            diagnosis: "New patient registration",
-            treatment: null
-          });
-
-        if (recordError) {
-          console.error("Patient record creation error:", recordError);
-          // If record creation fails, clean up everything
-          await supabase.auth.signOut();
-          throw new Error("Failed to create patient record: " + recordError.message);
         }
 
         // Set user state immediately after successful registration

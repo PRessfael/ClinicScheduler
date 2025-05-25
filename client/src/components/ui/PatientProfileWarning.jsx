@@ -1,7 +1,7 @@
-import { useLocation } from "wouter";
+import { usePatientProfile } from '@/hooks/usePatientProfile';
 
 const PatientProfileWarning = () => {
-    const [, setLocation] = useLocation();
+    const { redirectToPatientForm } = usePatientProfile();
 
     return (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
@@ -15,7 +15,7 @@ const PatientProfileWarning = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => setLocation("/complete-profile")}
+                    onClick={redirectToPatientForm}
                     className="ml-4 bg-yellow-100 px-4 py-2 rounded-md text-yellow-800 hover:bg-yellow-200 transition-colors font-medium"
                 >
                     Complete Profile

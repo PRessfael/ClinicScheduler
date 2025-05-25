@@ -85,7 +85,9 @@ const Auth = ({ type = "login" }) => {
           formData.password,
           "user",
           formData.username
-        ); if (!success) {
+        );
+
+        if (!success) {
           if (error.includes("Username already exists")) {
             setFormErrors({ username: "This username is already taken. Please choose another one." });
           } else if (error.includes("Email already")) {
@@ -98,13 +100,14 @@ const Auth = ({ type = "login" }) => {
             console.error("Registration error:", error);
             setFormErrors({ general: error });
           }
-          setIsSubmitting(false);
-        } else {          // Registration successful          // Registration successful and user is automatically logged in
+        } else {
+          // After successful registration, redirect based on user type
           if (user_type === 'admin') {
             setLocation("/admin/dashboard");
           } else if (user_type === 'doctor') {
             setLocation("/doctor/dashboard");
           } else {
+            // For regular users, always redirect to complete profile
             setLocation("/complete-profile");
           }
         }

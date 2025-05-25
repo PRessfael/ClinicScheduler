@@ -3,56 +3,42 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import RecordsTable from "../../components/records/RecordsTable";
 import PatientProfileWarning from "@/components/ui/PatientProfileWarning";
+import { usePatientProfile } from "@/hooks/usePatientProfile";
 
 const UserDashboard = () => {
   const { user } = useAuth();
+  const { patientProfile, hasPatientProfile, isLoading } = usePatientProfile();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [hasPatientProfile, setHasPatientProfile] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchRecords = async () => {
+      if (!hasPatientProfile || !patientProfile?.patient_id) {
+        setRecords([]);
+        setLoading(false);
+        return;
+      }
+
       try {
-        if (user?.user_type === "user") {
-          // Check for patient profile
-          const { data: patientData, error: patientError } = await supabase
-            .from("patients")
-            .select("patient_id, first_name, last_name")
-            .eq("user_id", user.id)
-            .single();
+        const { data: recordsData, error: recordsError } = await supabase
+          .from("patient_records")
+          .select("record_id, diagnosis, treatment")
+          .eq("patient_id", patientProfile.patient_id)
+          .order("record_id", { ascending: true });
 
-          if (patientError || !patientData || (!patientData.first_name && !patientData.last_name)) {
-            setHasPatientProfile(false);
-            setRecords([]);
-            setLoading(false);
-            return;
-          }
-
-          setHasPatientProfile(true);
-
-          // Fetch user's medical records
-          const { data: recordsData, error: recordsError } = await supabase
-            .from("patient_records")
-            .select("record_id, diagnosis, treatment")
-            .eq("patient_id", patientData.patient_id)
-            .order("record_id", { ascending: true });
-
-          if (recordsError) throw recordsError;
-          setRecords(recordsData);
-        }
+        if (recordsError) throw recordsError;
+        setRecords(recordsData);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching records:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
+    fetchRecords();
+  }, [hasPatientProfile, patientProfile]);
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#1e5631]"></div>

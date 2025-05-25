@@ -42,10 +42,9 @@ const PatientInfoForm = () => {
     }, [user]);
 
     const generatePatientId = () => {
-        // Get last 3 digits of timestamp and 3 random digits
         const timestamp = Date.now().toString().slice(-3);
         const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        return `P${timestamp}${random}`; // Format: P + 3 digits timestamp + 3 digits random = 7 chars total
+        return `P${timestamp}${random}`;
     };
 
     const handleSubmit = async (e) => {
