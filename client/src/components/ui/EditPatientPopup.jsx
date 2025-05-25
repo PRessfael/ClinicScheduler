@@ -1,11 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
 const EditPatientPopup = ({ patient, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     diagnosis: patient.condition || "",
     treatment: patient.treatment || "",
+    doctorId: patient.doctor_id || ""
   });
+  const [doctors, setDoctors] = useState([]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("doctors")
+          .select("doctor_id, name, specialty")
+          .order("name");
+
+        if (error) throw error;
+        setDoctors(data || []);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,16 +47,25 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
         .update({
           diagnosis: formData.diagnosis.trim(),
           treatment: formData.treatment?.trim() || null,
+          doctor_id: formData.doctorId || null
         })
         .eq("record_id", patient.record_id || patient.id);
 
       if (recordError) throw recordError;
+
+      // Get the selected doctor's information
+      const selectedDoctor = doctors.find(d => d.doctor_id === formData.doctorId);
+      const doctorDisplay = selectedDoctor
+        ? `${selectedDoctor.name} (${selectedDoctor.specialty})`
+        : 'Not Assigned';
 
       // Return updated data matching the structure expected by the table
       onSave({
         ...patient,
         condition: formData.diagnosis.trim(),
         treatment: formData.treatment?.trim() || null,
+        doctor: doctorDisplay,
+        doctor_id: formData.doctorId || null
       });
       onClose();
     } catch (error) {
@@ -53,6 +82,23 @@ const EditPatientPopup = ({ patient, onClose, onSave }) => {
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700">Name</label>
           <p className="text-gray-900">{patient.name}</p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">Assigned Doctor</label>
+          <select
+            name="doctorId"
+            value={formData.doctorId}
+            onChange={handleChange}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm"
+          >
+            <option value="">No specific doctor</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                {doctor.name} ({doctor.specialty})
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mb-4">

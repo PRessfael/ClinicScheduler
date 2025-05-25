@@ -18,7 +18,7 @@ const DoctorDashboard = () => {
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
-  const [addingPatient, setAddingPatient] = useState(false);  const [currentPage, setCurrentPage] = useState(1);
+  const [addingPatient, setAddingPatient] = useState(false); const [currentPage, setCurrentPage] = useState(1);
   const [patientsPerPage] = useState(5);
   const [totalRecords, setTotalRecords] = useState(0);
   const totalPages = Math.ceil(totalRecords / patientsPerPage);
@@ -45,7 +45,7 @@ const DoctorDashboard = () => {
       // After successful deletion, check if we need to adjust the current page
       const newTotalRecords = totalRecords - 1;
       const newTotalPages = Math.ceil(newTotalRecords / patientsPerPage);
-      
+
       if (currentPage > newTotalPages && newTotalPages > 0) {
         // If we're on a page that no longer exists, go to the last page
         setCurrentPage(newTotalPages);
@@ -53,7 +53,7 @@ const DoctorDashboard = () => {
         // Otherwise, refresh the current page
         fetchPatients();
       }
-      
+
       // Update stats
       setTotalRecords(newTotalRecords);
       setStats(prev => ({ ...prev, totalPatients: newTotalRecords }));
@@ -84,9 +84,9 @@ const DoctorDashboard = () => {
   const refreshStats = async () => {
     try {
       const [
-        { count: patientsCount }, 
-        { count: totalAppCount }, 
-        { count: pendingCount }, 
+        { count: patientsCount },
+        { count: totalAppCount },
+        { count: pendingCount },
         { count: completedCount }
       ] = await Promise.all([
         supabase.from("patients").select("*", { count: "exact" }),
@@ -204,7 +204,7 @@ const DoctorDashboard = () => {
     };
 
     fetchCompletedAppointments();
-  }, []);  const fetchPatients = async () => {
+  }, []); const fetchPatients = async () => {
     try {
       const from = (currentPage - 1) * patientsPerPage;
       const to = from + patientsPerPage - 1;
@@ -216,13 +216,18 @@ const DoctorDashboard = () => {
           record_id,
           diagnosis,
           treatment,
+          doctor_id,
+          doctors (
+            name,
+            specialty
+          ),
           patients(patient_id, first_name, last_name, age)
         `, { count: 'exact' })
         .order("record_id", { ascending: true })
         .range(from, to);
 
       if (error) throw error;
-      
+
       // Handle no data case
       if (!data || data.length === 0) {
         setPatients([]);
@@ -242,7 +247,8 @@ const DoctorDashboard = () => {
         age: record.patients?.age || 'N/A',
         condition: record.diagnosis || 'N/A',
         treatment: record.treatment || 'N/A',
-        patient_id: record.patients?.patient_id
+        patient_id: record.patients?.patient_id,
+        doctor: record.doctors ? `${record.doctors.name} (${record.doctors.specialty})` : 'Not Assigned'
       }));
 
       setPatients(formattedPatients);
@@ -315,6 +321,9 @@ const DoctorDashboard = () => {
                     Treatment
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned Doctor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -334,7 +343,10 @@ const DoctorDashboard = () => {
                       {patient.condition}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.treatment || "N/A"}
+                      {patient.treatment}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.doctor}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                       <button
@@ -363,29 +375,27 @@ const DoctorDashboard = () => {
           </div>
           {/* Pagination Controls */}
           <div className="px-6 py-4 flex justify-between items-center bg-gray-50 border-t">            <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
-              <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span>{" "}
-              of <span className="font-medium">{totalRecords}</span> results
-            </div>
+            Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
+            <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span>{" "}
+            of <span className="font-medium">{totalRecords}</span> results
+          </div>
             <div className="flex space-x-2">              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`px-3 py-1 border rounded-md text-sm font-medium ${
-                  currentPage === 1
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 border rounded-md text-sm font-medium ${currentPage === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-700 hover:bg-gray-50"
                 }`}
-              >
-                Previous
-              </button>
+            >
+              Previous
+            </button>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages}
-                className={`px-3 py-1 border rounded-md text-sm font-medium ${
-                  currentPage >= totalPages
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
+                className={`px-3 py-1 border rounded-md text-sm font-medium ${currentPage >= totalPages
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  }`}
               >
                 Next
               </button>

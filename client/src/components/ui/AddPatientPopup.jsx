@@ -9,11 +9,32 @@ const AddPatientPopup = ({ onClose, onSave }) => {
     age: "",
     diagnosis: "",
     treatment: "",
+    doctorId: ""
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [patientOptions, setPatientOptions] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [isExistingPatient, setIsExistingPatient] = useState(true);
   const [formErrors, setFormErrors] = useState({});
+
+  useEffect(() => {
+    // Fetch available doctors
+    const fetchDoctors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("doctors")
+          .select("doctor_id, name, specialty")
+          .order("name");
+
+        if (error) throw error;
+        setDoctors(data || []);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -101,26 +122,28 @@ const AddPatientPopup = ({ onClose, onSave }) => {
 
         if (patientError) throw patientError;
 
-        // Create the patient record with the provided diagnosis
+        // Create the patient record with the provided diagnosis and doctor
         const { data: recordData, error: recordError } = await supabase
           .from("patient_records")
           .insert({
             patient_id: patientData.patient_id,
             diagnosis: formData.diagnosis.trim(),
-            treatment: formData.treatment?.trim() || null
+            treatment: formData.treatment?.trim() || null,
+            doctor_id: formData.doctorId || null
           })
           .select()
           .single();
 
         if (recordError) throw recordError;
       } else {
-        // For existing patients, just create the record with the provided diagnosis
+        // For existing patients, just create the record
         const { error: recordError } = await supabase
           .from("patient_records")
           .insert({
             patient_id: formData.patientId,
             diagnosis: formData.diagnosis.trim(),
             treatment: formData.treatment?.trim() || null,
+            doctor_id: formData.doctorId || null
           });
 
         if (recordError) throw recordError;
@@ -240,6 +263,23 @@ const AddPatientPopup = ({ onClose, onSave }) => {
               </div>
             </>
           )}
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">Assign Doctor (Optional)</label>
+          <select
+            name="doctorId"
+            value={formData.doctorId}
+            onChange={handleChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm"
+          >
+            <option value="">No specific doctor</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                {doctor.name} ({doctor.specialty})
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mb-4">

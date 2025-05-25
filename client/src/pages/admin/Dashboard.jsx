@@ -123,6 +123,11 @@ const AdminDashboard = () => {
           record_id,
           diagnosis,
           treatment,
+          doctor_id,
+          doctors (
+            name,
+            specialty
+          ),
           patients(first_name, last_name, age)
         `, { count: 'exact' })
         .order("record_id", { ascending: true })
@@ -135,7 +140,8 @@ const AdminDashboard = () => {
         name: `${record.patients.first_name} ${record.patients.last_name}`,
         age: record.patients.age,
         condition: record.diagnosis,
-        treatment: record.treatment
+        treatment: record.treatment,
+        doctor: record.doctors ? `${record.doctors.name} (${record.doctors.specialty})` : 'Not Assigned'
       }));
 
       setPatients(formattedPatients);
@@ -374,6 +380,9 @@ const AdminDashboard = () => {
                     Treatment
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned Doctor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -395,6 +404,9 @@ const AdminDashboard = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {patient.treatment || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.doctor}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button

@@ -75,66 +75,41 @@ const RecordsTable = ({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Date
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Record ID
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Type
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Diagnosis
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Provider
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Treatment
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Description
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Actions
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Doctor
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {records.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
                   No records found
                 </td>
               </tr>
             ) : (
               records.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <tr key={record.record_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {record.date}
+                    {record.record_id}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.type?.className || ''}`}
-                    >
-                      {record.type?.label || 'Unknown'}
-                    </span>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {record.diagnosis || 'No diagnosis recorded'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {record.provider}
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {record.treatment || 'No treatment recorded'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{record.description}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button className="text-[#1e5631] hover:text-[#143e22] font-medium">
-                      View
-                    </button>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {record.doctor}
                   </td>
                 </tr>
               ))
