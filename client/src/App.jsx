@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import Home from "@/pages/Home";
 import Appointments from "@/pages/Appointments";
 import AppointmentDashboard from "@/pages/AppointmentDashboard";
-import Contact from "@/pages/Contact";
+
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -123,7 +123,7 @@ function Router() {
           <Route path="/appointment-dashboard">
             <ProtectedRoute component={AppointmentDashboard} adminOnly={false} />
           </Route>
-          <Route path="/contact" component={Contact} />
+
           <Route path="/login">
             {user ? <Dashboard /> : <Auth type="login" />}
           </Route>

@@ -115,10 +115,3 @@ export const DOCUMENT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-export const CONTACT_SUBJECTS = [
-  { value: "general", label: "General Inquiry" },
-  { value: "appointment", label: "Appointment Question" },
-  { value: "billing", label: "Billing Issue" },
-  { value: "medical", label: "Medical Question" },
-  { value: "feedback", label: "Feedback" },
-];
