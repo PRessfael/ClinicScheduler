@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import AddSchedulePopup from "./AddSchedulePopup";
+import { Link } from "wouter";
 
 const DoctorScheduleTable = () => {
     const [schedules, setSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isAddScheduleOpen, setIsAddScheduleOpen] = useState(false);
 
     const formatWeekdays = (schedString) => {
         const dayMap = {
@@ -51,19 +50,18 @@ const DoctorScheduleTable = () => {
             const { data, error } = await supabase
                 .from('doctor_schedule')
                 .select(`
-          schedule_id,
-          doctor_id,
-          time_slots,
-          sched,
-          doctors (
-            name,
-            specialty
-          )
-        `)
+                    schedule_id,
+                    doctor_id,
+                    time_slots,
+                    sched,
+                    doctors (
+                        name,
+                        specialty
+                    )
+                `)
                 .order('doctor_id');
 
             if (error) throw error;
-
             setSchedules(data || []);
         } catch (error) {
             console.error('Error fetching doctor schedules:', error);
@@ -75,14 +73,6 @@ const DoctorScheduleTable = () => {
     useEffect(() => {
         fetchSchedules();
     }, []);
-
-    const handleAddSchedule = () => {
-        setIsAddScheduleOpen(true);
-    };
-
-    const handleScheduleSaved = () => {
-        fetchSchedules();
-    };
 
     if (loading) {
         return (
@@ -96,12 +86,11 @@ const DoctorScheduleTable = () => {
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
             <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-800">Doctor Schedules</h2>
-                <button
-                    onClick={handleAddSchedule}
-                    className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
-                >
-                    Add Schedule
-                </button>
+                <Link href="/manage-schedules">
+                    <a className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]">
+                        Manage Schedules
+                    </a>
+                </Link>
             </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -141,13 +130,6 @@ const DoctorScheduleTable = () => {
                     </tbody>
                 </table>
             </div>
-
-            {isAddScheduleOpen && (
-                <AddSchedulePopup
-                    onClose={() => setIsAddScheduleOpen(false)}
-                    onSave={handleScheduleSaved}
-                />
-            )}
         </div>
     );
 };
