@@ -46,7 +46,15 @@ const AddPatientPopup = ({ onClose, onSave }) => {
       try {
         const { data, error } = await supabase
           .from("patients")
-          .select("patient_id, first_name, last_name")
+          .select(`
+            patient_id,
+            first_name,
+            last_name,
+            user_id,
+            users (
+              username
+            )
+          `)
           .or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
           .limit(5);
 
@@ -55,6 +63,7 @@ const AddPatientPopup = ({ onClose, onSave }) => {
         const formattedOptions = data.map((patient) => ({
           id: patient.patient_id,
           name: `${patient.first_name} ${patient.last_name}`,
+          username: patient.users?.username
         }));
 
         setPatientOptions(formattedOptions);
@@ -206,12 +215,15 @@ const AddPatientPopup = ({ onClose, onSave }) => {
                       key={option.id}
                       onClick={() => {
                         setFormData((prevData) => ({ ...prevData, patientId: option.id }));
-                        setSearchQuery(option.name);
+                        setSearchQuery(option.username ? `${option.name} (${option.username})` : option.name);
                         setPatientOptions([]);
                       }}
-                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                      className="px-4 py-2 cursor-pointer hover:bg-gray-100 flex justify-between items-center"
                     >
-                      {option.name}
+                      <span>{option.name}</span>
+                      {option.username && (
+                        <span className="text-gray-500 text-sm">({option.username})</span>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -5,9 +5,11 @@ import EditPatientPopup from "../../components/ui/EditPatientPopup";
 import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
 import DeleteWarning from "../../components/ui/DeleteWarning";
 import AddPatientPopup from "../../components/ui/AddPatientPopup";
+import DoctorAvailabilityTable from "../../components/ui/DoctorAvailabilityTable";
 
 const DoctorDashboard = () => {
   const { user } = useAuth();
+  const [doctorId, setDoctorId] = useState(null);
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,
@@ -18,100 +20,35 @@ const DoctorDashboard = () => {
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
-  const [addingPatient, setAddingPatient] = useState(false); const [currentPage, setCurrentPage] = useState(1);
+  const [addingPatient, setAddingPatient] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [patientsPerPage] = useState(5);
   const [totalRecords, setTotalRecords] = useState(0);
   const totalPages = Math.ceil(totalRecords / patientsPerPage);
-  // Navigation functions
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
-  const deletePatient = async (recordId) => {
-    if (!recordId) {
-      console.error("Invalid record ID provided for deletion.");
-      return;
-    }
 
-    try {
-      const { error } = await supabase
-        .from("patient_records")
-        .delete()
-        .eq("record_id", recordId);
+  // Fetch doctor_id for the current user
+  useEffect(() => {
+    const fetchDoctorId = async () => {
+      if (!user?.id) return;
 
-      if (error) throw error;
+      try {
+        const { data, error } = await supabase
+          .from('doctors')
+          .select('doctor_id')
+          .eq('user_id', user.id)
+          .single();
 
-      // After successful deletion, check if we need to adjust the current page
-      const newTotalRecords = totalRecords - 1;
-      const newTotalPages = Math.ceil(newTotalRecords / patientsPerPage);
-
-      if (currentPage > newTotalPages && newTotalPages > 0) {
-        // If we're on a page that no longer exists, go to the last page
-        setCurrentPage(newTotalPages);
-      } else {
-        // Otherwise, refresh the current page
-        fetchPatients();
+        if (error) throw error;
+        if (data) {
+          setDoctorId(data.doctor_id);
+        }
+      } catch (error) {
+        console.error('Error fetching doctor ID:', error);
       }
+    };
 
-      // Update stats
-      setTotalRecords(newTotalRecords);
-      setStats(prev => ({ ...prev, totalPatients: newTotalRecords }));
-    } catch (error) {
-      console.error("Error deleting patient record:", error);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (deletingPatient) {
-      await deletePatient(deletingPatient);
-      setDeletingPatient(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeletingPatient(null);
-  };
-
-  const handleEditSave = (updatedPatient) => {
-    setPatients((prevPatients) =>
-      prevPatients.map((patient) =>
-        patient.record_id === editingPatient.record_id ? { ...patient, ...updatedPatient } : patient
-      )
-    );
-    setEditingPatient(null);
-  };
-  const refreshStats = async () => {
-    try {
-      const [
-        { count: patientsCount },
-        { count: totalAppCount },
-        { count: pendingCount },
-        { count: completedCount }
-      ] = await Promise.all([
-        supabase.from("patients").select("*", { count: "exact" }),
-        supabase.from("appointments").select("*", { count: "exact" }),
-        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "pending"),
-        supabase.from("appointments").select("*", { count: "exact" }).eq("status", "completed")
-      ]);
-
-      setStats({
-        totalPatients: patientsCount || 0,
-        totalAppointments: totalAppCount || 0,
-        pendingAppointments: pendingCount || 0,
-        completedAppointments: completedCount || 0
-      });
-    } catch (error) {
-      console.error("Error refreshing stats:", error);
-    }
-  };
-
-  const handleAddPatientSave = () => {
-    setAddingPatient(false);
-    // Re-fetch both patients and stats
-    fetchPatients();
-    refreshStats();
-  };
+    fetchDoctorId();
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -189,7 +126,7 @@ const DoctorDashboard = () => {
       try {
         const { count, error } = await supabase
           .from("appointments")
-          .select("id", { count: "exact" })
+          .select("appointment_id", { count: "exact" })
           .eq("status", "completed");
 
         if (error) throw error;
@@ -204,7 +141,94 @@ const DoctorDashboard = () => {
     };
 
     fetchCompletedAppointments();
-  }, []); const fetchPatients = async () => {
+  }, []);
+
+  const deletePatient = async (recordId) => {
+    if (!recordId) {
+      console.error("Invalid record ID provided for deletion.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("patient_records")
+        .delete()
+        .eq("record_id", recordId);
+
+      if (error) throw error;
+
+      // After successful deletion, check if we need to adjust the current page
+      const newTotalRecords = totalRecords - 1;
+      const newTotalPages = Math.ceil(newTotalRecords / patientsPerPage);
+
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        // If we're on a page that no longer exists, go to the last page
+        setCurrentPage(newTotalPages);
+      } else {
+        // Otherwise, refresh the current page
+        fetchPatients();
+      }
+
+      // Update stats
+      setTotalRecords(newTotalRecords);
+      setStats(prev => ({ ...prev, totalPatients: newTotalRecords }));
+    } catch (error) {
+      console.error("Error deleting patient record:", error);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingPatient) {
+      await deletePatient(deletingPatient);
+      setDeletingPatient(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingPatient(null);
+  };
+
+  const handleEditSave = (updatedPatient) => {
+    setPatients((prevPatients) =>
+      prevPatients.map((patient) =>
+        patient.record_id === editingPatient.record_id ? { ...patient, ...updatedPatient } : patient
+      )
+    );
+    setEditingPatient(null);
+  };
+  const refreshStats = async () => {
+    try {
+      const [
+        { count: patientsCount },
+        { count: totalAppCount },
+        { count: pendingCount },
+        { count: completedCount }
+      ] = await Promise.all([
+        supabase.from("patients").select("*", { count: "exact" }),
+        supabase.from("appointments").select("appointment_id", { count: "exact" }),
+        supabase.from("appointments").select("appointment_id", { count: "exact" }).eq("status", "pending"),
+        supabase.from("appointments").select("appointment_id", { count: "exact" }).eq("status", "completed")
+      ]);
+
+      setStats({
+        totalPatients: patientsCount || 0,
+        totalAppointments: totalAppCount || 0,
+        pendingAppointments: pendingCount || 0,
+        completedAppointments: completedCount || 0
+      });
+    } catch (error) {
+      console.error("Error refreshing stats:", error);
+    }
+  };
+
+  const handleAddPatientSave = () => {
+    setAddingPatient(false);
+    // Re-fetch both patients and stats
+    fetchPatients();
+    refreshStats();
+  };
+
+  const fetchPatients = async () => {
     try {
       const from = (currentPage - 1) * patientsPerPage;
       const to = from + patientsPerPage - 1;
@@ -290,8 +314,9 @@ const DoctorDashboard = () => {
         </div>
       </div>
 
+      {/* Patient Records Section */}
       {(user?.user_type === "admin" || user?.user_type === "doctor") && (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
           <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-800">Patient Records</h2>
             <button
@@ -404,6 +429,14 @@ const DoctorDashboard = () => {
         </div>
       )}
 
+      {/* Doctor Availability History Section */}
+      {doctorId && (
+        <div className="mt-8">
+          <DoctorAvailabilityTable doctorId={doctorId} />
+        </div>
+      )}
+
+      {/* Existing popups */}
       {viewingPatient && (
         <ViewPatientDetails
           recordId={viewingPatient}
