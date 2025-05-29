@@ -9,7 +9,8 @@ const Auth = ({ type = "login" }) => {
     username: "",
     password: "",
     confirmPassword: "",
-    email: ""
+    email: "",
+    phoneNumber: ""
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,7 +85,8 @@ const Auth = ({ type = "login" }) => {
           formData.email,
           formData.password,
           "user",
-          formData.username
+          formData.username,
+          formData.phoneNumber
         );
 
         if (!success) {
@@ -150,25 +152,29 @@ const Auth = ({ type = "login" }) => {
               )}
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                className={`mt-1 block w-full px-3 py-2 border ${formErrors.password ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {formErrors.password && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
-              )}
-            </div>
+            {/* Password field for login */}
+            {isLogin && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  className={`mt-1 block w-full px-3 py-2 border ${formErrors.password ? "border-red-500" : "border-gray-300"
+                    } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                {formErrors.password && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
+                )}
+              </div>
+            )}
 
+            {/* Registration form fields */}
             {!isLogin && (
               <>
                 <div>
@@ -187,6 +193,45 @@ const Auth = ({ type = "login" }) => {
                   />
                   {formErrors.email && (
                     <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                    Phone Number (Optional)
+                  </label>
+                  <input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    type="text"
+                    autoComplete="tel"
+                    className={`mt-1 block w-full px-3 py-2 border ${formErrors.phoneNumber ? "border-red-500" : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                  />
+                  {formErrors.phoneNumber && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.phoneNumber}</p>
+                  )}
+                </div>
+
+                {/* Password field for registration */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    className={`mt-1 block w-full px-3 py-2 border ${formErrors.password ? "border-red-500" : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-[#1e5631] focus:border-[#1e5631]`}
+                    value={formData.password}
+                    onChange={handleChange}
+                  />
+                  {formErrors.password && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
                   )}
                 </div>
 

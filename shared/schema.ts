@@ -10,7 +10,8 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 100 }).notNull().default(''),
   username: varchar("username").unique(),
   user_type: text("user_type").notNull().default("user"),
-  created_at: timestamp("created_at").defaultNow()
+  created_at: timestamp("created_at").defaultNow(),
+  phone: text("phone").unique()
 });
 
 export const patients = pgTable("patients", {
@@ -24,6 +25,7 @@ export const patients = pgTable("patients", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   user_type: true,
+  phone: true
 }).extend({
   user_type: userTypeEnum.optional(),
 });

@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   };  // Register function
-  const register = async (email, password, user_type, username) => {
+  const register = async (email, password, user_type, username, phoneNumber) => {
     try {
       // First check if username or email already exists
       const { data: existingUser, error: checkError } = await supabase
@@ -123,7 +123,7 @@ export const AuthProvider = ({ children }) => {
           data: {
             username,
             user_type,
-            display_name: username  // Set display_name in auth metadata
+            display_name: username
           }
         }
       });
@@ -138,14 +138,15 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Insert user into our custom users table
+        // Insert user into our custom users table with phone
         const { error: insertError } = await supabase
           .from("users")
           .insert({
-            id: data.user.id,      // This will match auth.users(id)
-            email: email,          // Email from the signup
-            username: username,     // Username from the form
-            user_type: user_type   // User type from the form
+            id: data.user.id,
+            email: email,
+            username: username,
+            user_type: user_type,
+            phone: phoneNumber || null  // Store phone in public.users
           });
 
         if (insertError) {
@@ -159,7 +160,8 @@ export const AuthProvider = ({ children }) => {
         setUser({
           id: data.user.id,
           username: username,
-          user_type: user_type
+          user_type: user_type,
+          phone: phoneNumber || null
         });
 
         return { success: true, user_type: user_type };
