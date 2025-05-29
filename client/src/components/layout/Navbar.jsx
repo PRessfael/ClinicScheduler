@@ -15,7 +15,6 @@ const Navbar = () => {
   // Define navigation links based on user role
   let navLinks = [
     { href: "/", label: "Home" },
-    { href: "/contact", label: "Contact Us" },
   ];
   if (user) {
     // Add dashboard link based on user type
@@ -33,7 +32,6 @@ const Navbar = () => {
       // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
-        { href: "/contact", label: "Contact Us" },
         { href: "/doctor/dashboard", label: "Clinic Dashboard" },
         { href: "/appointment-dashboard", label: "Appointments" },
       ];

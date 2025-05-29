@@ -92,13 +92,13 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   };  // Register function
-  const register = async (email, password, user_type, username) => {
+  const register = async (email, password, user_type, username, phoneNumber) => {
     try {
       // First check if username or email already exists
       const { data: existingUser, error: checkError } = await supabase
         .from("users")
         .select("username, email")
-        .or(`username.eq.${username},email.eq.${email}`)
+        .or(`username.eq."${username}",email.eq."${email}"`)
         .maybeSingle();
 
       if (checkError) {
@@ -122,7 +122,8 @@ export const AuthProvider = ({ children }) => {
         options: {
           data: {
             username,
-            user_type
+            user_type,
+            display_name: username
           }
         }
       });
@@ -137,7 +138,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Insert user into our custom users table
+        // Insert user into our custom users table with phone
         const { error: insertError } = await supabase
           .from("users")
           .insert({
@@ -145,8 +146,7 @@ export const AuthProvider = ({ children }) => {
             email: email,
             username: username,
             user_type: user_type,
-            created_at: new Date().toISOString(),
-            password: '**********' // Adding a placeholder since the column is required, but never used
+            phone: phoneNumber || null  // Store phone in public.users
           });
 
         if (insertError) {
@@ -160,7 +160,8 @@ export const AuthProvider = ({ children }) => {
         setUser({
           id: data.user.id,
           username: username,
-          user_type: user_type
+          user_type: user_type,
+          phone: phoneNumber || null
         });
 
         return { success: true, user_type: user_type };

@@ -19,7 +19,7 @@ const MobileMenu = ({ isOpen, currentPath, user, logout, navLinks }) => {
           <Link
             key={link.href}
             href={link.href}
-            className={`text-white${currentPath !== link.href ? "/90 hover:text-white" : ""
+            className={`text-white${currentPath !== link.href ? "/90 hover:text-white text-white" : ""
               } font-medium py-2 ${currentPath === link.href
                 ? "border-l-4 border-white pl-2"
                 : "hover:border-l-4 hover:border-white pl-2 transition-all"

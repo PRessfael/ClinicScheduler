@@ -142,6 +142,12 @@ const Profile = () => {
                                             {getUserTypeDisplay(userDetails?.user_type)}
                                         </span>
                                     </div>
+                                    <div>
+                                        <span className="text-gray-600 font-medium">Phone:</span>
+                                        <span className="ml-2 text-gray-800">
+                                            {userDetails?.phone || 'Not provided'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             <div>

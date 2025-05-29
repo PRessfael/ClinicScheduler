@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import Home from "@/pages/Home";
 import Appointments from "@/pages/Appointments";
 import AppointmentDashboard from "@/pages/AppointmentDashboard";
-import Contact from "@/pages/Contact";
+
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -20,6 +20,7 @@ import { UserRoute, AdminRoute, ProtectedRoute } from "@/components/auth/Protect
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import ManageSchedules from "@/pages/ManageSchedules";
 
 function Dashboard() {
   const { user, isAdmin, isDoctor } = useAuth();
@@ -123,7 +124,10 @@ function Router() {
           <Route path="/appointment-dashboard">
             <ProtectedRoute component={AppointmentDashboard} adminOnly={false} />
           </Route>
-          <Route path="/contact" component={Contact} />
+          <Route path="/manage-schedules">
+            <ProtectedRoute component={ManageSchedules} allowedRoles={["admin"]} />
+          </Route>
+
           <Route path="/login">
             {user ? <Dashboard /> : <Auth type="login" />}
           </Route>

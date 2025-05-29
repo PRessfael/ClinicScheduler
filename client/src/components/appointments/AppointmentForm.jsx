@@ -4,49 +4,22 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from "@/hooks/use-toast";
+import AppointmentCalendar from './AppointmentCalendar';
 
-const AppointmentForm = ({
-  selectedDate,
-  setSelectedDate,
-  selectedTime,
-  setSelectedTime,
-  provider,
-  setProvider,
-  reason,
-  setReason,
-  formErrors = {},
-  onSuccess
-}) => {
+const AppointmentForm = ({ onSuccess }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [doctorSchedule, setDoctorSchedule] = useState(null);
+  const [doctorAvailability, setDoctorAvailability] = useState(null);
+  const [formData, setFormData] = useState({
+    selectedDate: '',
+    selectedTime: '',
+    reason: ''
+  });
 
-  // Generate time slots for the selected date
-  const generateTimeSlots = () => {
-    const slots = [];
-    const startHour = 9; // 9 AM
-    const endHour = 17; // 5 PM
-
-    for (let hour = startHour; hour < endHour; hour++) {
-      const formattedHour = hour.toString().padStart(2, '0');
-      slots.push(`${formattedHour}:00`);
-    }
-
-    return slots;
-  };
-
-  // Get minimum date (today) and maximum date (3 months from now)
-  const getMinDate = () => {
-    const today = new Date();
-    return format(today, 'yyyy-MM-dd');
-  };
-
-  const getMaxDate = () => {
-    const maxDate = new Date();
-    maxDate.setMonth(maxDate.getMonth() + 3);
-    return format(maxDate, 'yyyy-MM-dd');
-  };
-
+  // Fetch doctors and their schedules
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -62,7 +35,7 @@ const AppointmentForm = ({
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load doctors list. Please try again later."
+          description: "Failed to load doctors list."
         });
       }
     };
@@ -70,8 +43,100 @@ const AppointmentForm = ({
     fetchDoctors();
   }, []);
 
-  const submitAppointment = async () => {
-    if (!selectedDate || !selectedTime || !reason?.trim()) {
+  // Fetch doctor's schedule when selected
+  useEffect(() => {
+    const fetchDoctorSchedule = async () => {
+      if (!selectedDoctor) {
+        setDoctorSchedule(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('doctor_schedule')
+          .select('*')
+          .eq('doctor_id', selectedDoctor)
+          .single();
+
+        if (error) {
+          if (error.code === 'PGRST116') { // No data found
+            setDoctorSchedule(null);
+          } else {
+            throw error;
+          }
+        } else {
+          setDoctorSchedule(data);
+        }
+      } catch (error) {
+        console.error('Error fetching doctor schedule:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load doctor's schedule."
+        });
+      }
+    };
+
+    fetchDoctorSchedule();
+  }, [selectedDoctor]);
+
+  // Check doctor availability
+  useEffect(() => {
+    const checkDoctorAvailability = async () => {
+      if (!selectedDoctor || !formData.selectedDate) {
+        setDoctorAvailability(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('doctor_availability')
+          .select('*')
+          .eq('doctor_id', selectedDoctor)
+          .lte('from_date', formData.selectedDate)
+          .or(`to_date.is.null,to_date.gte.${formData.selectedDate}`);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setDoctorAvailability(data[0]);
+        } else {
+          setDoctorAvailability(null);
+        }
+      } catch (error) {
+        console.error('Error checking doctor availability:', error);
+        setDoctorAvailability(null);
+      }
+    };
+
+    checkDoctorAvailability();
+  }, [selectedDoctor, formData.selectedDate]);
+
+  const getAvailableTimeSlots = () => {
+    if (!doctorSchedule) {
+      // Default time slots if no doctor selected (9 AM to 5 PM)
+      return Array.from({ length: 9 }, (_, i) => ({
+        time: `${i + 9}:00`,
+        available: true,
+        label: `${i + 9}:00 ${i + 9 < 12 ? 'AM' : 'PM'}`
+      }));
+    }
+
+    const [start, end] = doctorSchedule.time_slots.split('-').map(Number);
+    // Add 1 to include the end time
+    return Array.from({ length: end - start + 1 }, (_, i) => {
+      const hour = start + i;
+      return {
+        time: `${hour}:00`,
+        available: true,
+        label: `${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`
+      };
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.selectedDate || !formData.selectedTime || !formData.reason?.trim()) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -93,46 +158,42 @@ const AppointmentForm = ({
         throw new Error('Could not find your patient record. Please complete your profile first.');
       }
 
-      // Format date and time according to PostgreSQL requirements
-      const appointmentDate = new Date(selectedDate);
-      const formattedDate = format(appointmentDate, 'yyyy-MM-dd'); // date type
-      const formattedTime = selectedTime + ':00'; // time without time zone type
+      // Format date and time
+      const appointmentDate = new Date(formData.selectedDate);
+      const formattedDate = format(appointmentDate, 'yyyy-MM-dd');
+      const formattedTime = formData.selectedTime + ':00';
 
-      // First create the appointment
+      // Create appointment
       const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
           patient_id: patientData.patient_id,
-          doctor_id: provider || null,
+          doctor_id: selectedDoctor || null,
           date: formattedDate,
           time: formattedTime,
           status: 'pending',
-          reason: reason.trim()
+          reason: formData.reason.trim()
         })
         .select('appointment_id')
         .single();
 
-      if (appointmentError) {
-        console.error('Appointment creation error:', appointmentError);
-        throw new Error('Failed to create appointment. Please try again.');
-      }
+      if (appointmentError) throw appointmentError;
 
-      // Then create the queue entry
+      // Create queue entry
       const { error: queueError } = await supabase
         .from('appointment_queue')
         .insert({
           appointment_id: appointmentData.appointment_id,
-          reason: reason.trim()
+          reason: formData.reason.trim()
         });
 
       if (queueError) {
-        // If queue entry fails, we should delete the appointment
+        // Rollback appointment if queue entry fails
         await supabase
           .from('appointments')
           .delete()
           .eq('appointment_id', appointmentData.appointment_id);
-
-        throw new Error('Failed to queue appointment. Please try again.');
+        throw queueError;
       }
 
       toast({
@@ -140,11 +201,13 @@ const AppointmentForm = ({
         description: "Your appointment has been successfully scheduled",
       });
 
-      // Reset form state
-      setProvider('');
-      setReason('');
-      setSelectedTime('');
-      setSelectedDate('');
+      // Reset form
+      setFormData({
+        selectedDate: '',
+        selectedTime: '',
+        reason: ''
+      });
+      setSelectedDoctor(null);
 
       if (onSuccess) onSuccess();
 
@@ -153,123 +216,112 @@ const AppointmentForm = ({
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to schedule appointment. Please try again."
+        description: error.message || "Failed to schedule appointment."
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    submitAppointment();
-  };
-
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Appointment Details</h3>
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Select Doctor (Optional)
+        </label>
+        <select
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
+          value={selectedDoctor || ''}
+          onChange={(e) => setSelectedDoctor(e.target.value || null)}
+        >
+          <option value="">Any available doctor</option>
+          {doctors.map((doctor) => (
+            <option key={doctor.doctor_id} value={doctor.doctor_id}>
+              {doctor.name}{doctor.specialty ? ` (${doctor.specialty})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="provider">
-              Preferred Provider (Optional)
-            </label>
-            <select
-              id="provider"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
-              value={provider}
-              onChange={(e) => setProvider(e.target.value)}
-            >
-              <option value="">No preference</option>
-              {doctors.map((doctor) => (
-                <option key={doctor.doctor_id} value={doctor.doctor_id}>
-                  {doctor.name}{doctor.specialty ? ` (${doctor.specialty})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Doctor Schedule Info */}
+      {doctorSchedule && (
+        <div className="bg-blue-50 p-4 rounded-md">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">Doctor's Working Hours:</span> {doctorSchedule.time_slots.split('-')[0]}:00 - {doctorSchedule.time_slots.split('-')[1]}:00
+          </p>
+          <p className="text-sm text-blue-800 mt-1">
+            <span className="font-medium">Working Days:</span> {doctorSchedule.sched.split('').map(day => {
+              const days = { M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat', Sn: 'Sun' };
+              return days[day] || day;
+            }).join(', ')}
+          </p>
+        </div>
+      )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="date">
-              Preferred Date
-            </label>
-            <input
-              type="date"
-              id="date"
-              min={getMinDate()}
-              max={getMaxDate()}
-              className={`w-full px-3 py-2 border ${formErrors.date ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-            {formErrors.date && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.date}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="time">
-              Preferred Time
-            </label>
-            <select
-              id="time"
-              className={`w-full px-3 py-2 border ${formErrors.time ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-            >
-              <option value="">Select time</option>
-              {generateTimeSlots().map((time) => (
-                <option key={time} value={time}>
-                  {time}
-                </option>
-              ))}
-            </select>
-            {formErrors.time && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.time}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="reason">
-              Reason for Visit
-            </label>
-            <textarea
-              id="reason"
-              rows="3"
-              className={`w-full px-3 py-2 border ${formErrors.reason ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]`}
-              placeholder="Briefly describe your symptoms or reason for visit"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            ></textarea>
-            {formErrors.reason && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.reason}</p>
-            )}
-          </div>
-
-          {selectedDate && selectedTime && (
-            <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-sm text-blue-800 font-medium">Selected Appointment:</p>
-              <p className="text-sm text-blue-800">
-                {format(new Date(selectedDate), "MMMM d, yyyy")} at {selectedTime}
-              </p>
+      {/* Doctor Availability Warning */}
+      {doctorAvailability && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
             </div>
-          )}
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-[#4caf50] hover:bg-[#087f23] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Scheduling...' : 'Confirm Appointment'}
-            </button>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Doctor Availability Warning
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>
+                  The selected doctor may not be available on this date. They have an unavailability period from{' '}
+                  {format(new Date(doctorAvailability.from_date), 'MMMM d, yyyy')}{' '}
+                  {doctorAvailability.to_date ? (
+                    <>to {format(new Date(doctorAvailability.to_date), 'MMMM d, yyyy')}</>
+                  ) : (
+                    'onwards'
+                  )}.
+                </p>
+                <p className="mt-1">
+                  You can still proceed with the appointment, but it may need to be rescheduled or assigned to another doctor.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </form>
+      )}
+
+      <AppointmentCalendar
+        selectedDate={formData.selectedDate}
+        setSelectedDate={(date) => setFormData(prev => ({ ...prev, selectedDate: date }))}
+        selectedTime={formData.selectedTime}
+        setSelectedTime={(time) => setFormData(prev => ({ ...prev, selectedTime: time }))}
+        availableTimeSlots={getAvailableTimeSlots()}
+        doctorSchedule={doctorSchedule}
+      />
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Reason for Visit
+        </label>
+        <textarea
+          rows="3"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
+          placeholder="Briefly describe your symptoms or reason for visit"
+          value={formData.reason}
+          onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+        ></textarea>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="w-full bg-[#4caf50] hover:bg-[#087f23] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? 'Scheduling...' : 'Confirm Appointment'}
+        </button>
+      </div>
     </div>
   );
 };
