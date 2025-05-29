@@ -5,6 +5,8 @@ import EditPatientPopup from "../../components/ui/EditPatientPopup";
 import AddPatientPopup from "../../components/ui/AddPatientPopup.jsx";
 import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
 import DeleteWarning from "../../components/ui/DeleteWarning";
+import DoctorScheduleTable from "../../components/ui/DoctorScheduleTable";
+import DoctorAvailabilityTable from "../../components/ui/DoctorAvailabilityTable";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -353,6 +355,14 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Doctor Schedules Section */}
+      {(user?.user_type === "admin" || user?.user_type === "doctor") && (
+        <>
+          <DoctorScheduleTable />
+          <DoctorAvailabilityTable />
+        </>
+      )}
 
       {/* Patient Records Section */}
       {(user?.user_type === "admin" || user?.user_type === "doctor") && (
