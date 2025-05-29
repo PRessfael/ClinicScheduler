@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import DeleteWarning from "./DeleteWarning";
 
-const DoctorAvailabilityTable = () => {
+const DoctorAvailabilityTable = ({ doctorId }) => {
     const { toast } = useToast();
     const [availabilities, setAvailabilities] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -12,15 +12,17 @@ const DoctorAvailabilityTable = () => {
     const [deletingAvailability, setDeletingAvailability] = useState(null);
     const [doctors, setDoctors] = useState([]);
     const [formData, setFormData] = useState({
-        doctor_id: "",
+        doctor_id: doctorId || "",
         from_date: "",
         to_date: ""
     });
 
     useEffect(() => {
-        fetchDoctors();
+        if (!doctorId) {
+            fetchDoctors();
+        }
         fetchAvailabilities();
-    }, []);
+    }, [doctorId]);
 
     const fetchDoctors = async () => {
         try {
@@ -43,7 +45,7 @@ const DoctorAvailabilityTable = () => {
 
     const fetchAvailabilities = async () => {
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('doctor_availability')
                 .select(`
                     availability_id,
@@ -55,6 +57,13 @@ const DoctorAvailabilityTable = () => {
                     )
                 `)
                 .order('from_date', { ascending: true });
+
+            // If doctorId is provided, filter for that doctor only
+            if (doctorId) {
+                query = query.eq('doctor_id', doctorId);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
             setAvailabilities(data || []);
@@ -118,7 +127,7 @@ const DoctorAvailabilityTable = () => {
                 ({ error } = await supabase
                     .from('doctor_availability')
                     .update({
-                        doctor_id: formData.doctor_id,
+                        doctor_id: doctorId || formData.doctor_id,
                         from_date: formData.from_date,
                         to_date: formData.to_date || null
                     })
@@ -128,7 +137,7 @@ const DoctorAvailabilityTable = () => {
                 ({ error } = await supabase
                     .from('doctor_availability')
                     .insert({
-                        doctor_id: formData.doctor_id,
+                        doctor_id: doctorId || formData.doctor_id,
                         from_date: formData.from_date,
                         to_date: formData.to_date || null
                     }));
@@ -161,7 +170,7 @@ const DoctorAvailabilityTable = () => {
     const handleCancel = () => {
         setIsAddingAvailability(false);
         setEditingAvailability(null);
-        setFormData({ doctor_id: "", from_date: "", to_date: "" });
+        setFormData({ doctor_id: doctorId || "", from_date: "", to_date: "" });
     };
 
     const formatDate = (dateString) => {
@@ -219,7 +228,9 @@ const DoctorAvailabilityTable = () => {
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
             <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">Doctor Unavailability Periods</h2>
+                <h2 className="text-xl font-semibold text-gray-800">
+                    {doctorId ? "My Unavailability Periods" : "Doctor Unavailability Periods"}
+                </h2>
                 {!isAddingAvailability && (
                     <button
                         onClick={() => setIsAddingAvailability(true)}
@@ -233,24 +244,26 @@ const DoctorAvailabilityTable = () => {
             {isAddingAvailability ? (
                 <div className="p-6">
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Select Doctor
-                            </label>
-                            <select
-                                value={formData.doctor_id}
-                                onChange={(e) => setFormData(prev => ({ ...prev, doctor_id: e.target.value }))}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
-                                required
-                            >
-                                <option value="">Select a doctor</option>
-                                {doctors.map((doctor) => (
-                                    <option key={doctor.doctor_id} value={doctor.doctor_id}>
-                                        {doctor.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {!doctorId && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Select Doctor
+                                </label>
+                                <select
+                                    value={formData.doctor_id}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, doctor_id: e.target.value }))}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
+                                    required
+                                >
+                                    <option value="">Select a doctor</option>
+                                    {doctors.map((doctor) => (
+                                        <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                                            {doctor.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -302,9 +315,11 @@ const DoctorAvailabilityTable = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Doctor Name
-                                </th>
+                                {!doctorId && (
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Doctor Name
+                                    </th>
+                                )}
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     From Date
                                 </th>
@@ -322,9 +337,11 @@ const DoctorAvailabilityTable = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {availabilities.map((availability) => (
                                 <tr key={availability.availability_id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {availability.doctors?.name || 'Unknown'}
-                                    </td>
+                                    {!doctorId && (
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {availability.doctors?.name || 'Unknown'}
+                                        </td>
+                                    )}
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {formatDate(availability.from_date)}
                                     </td>
@@ -364,7 +381,7 @@ const DoctorAvailabilityTable = () => {
 
             {deletingAvailability && (
                 <DeleteWarning
-                    message={`Are you sure you want to delete this unavailability period for ${deletingAvailability.doctors?.name}?`}
+                    message={`Are you sure you want to delete this unavailability period${!doctorId ? ` for ${deletingAvailability.doctors?.name}` : ''}?`}
                     onConfirm={handleDelete}
                     onCancel={() => setDeletingAvailability(null)}
                 />
