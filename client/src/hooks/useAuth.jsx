@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       const { data: existingUser, error: checkError } = await supabase
         .from("users")
         .select("username, email")
-        .or(`username.eq.${username},email.eq.${email}`)
+        .or(`username.eq."${username}",email.eq."${email}"`)
         .maybeSingle();
 
       if (checkError) {
@@ -122,7 +122,8 @@ export const AuthProvider = ({ children }) => {
         options: {
           data: {
             username,
-            user_type
+            user_type,
+            display_name: username  // Set display_name in auth metadata
           }
         }
       });
@@ -141,12 +142,10 @@ export const AuthProvider = ({ children }) => {
         const { error: insertError } = await supabase
           .from("users")
           .insert({
-            id: data.user.id,
-            email: email,
-            username: username,
-            user_type: user_type,
-            created_at: new Date().toISOString(),
-            password: '**********' // Adding a placeholder since the column is required, but never used
+            id: data.user.id,      // This will match auth.users(id)
+            email: email,          // Email from the signup
+            username: username,     // Username from the form
+            user_type: user_type   // User type from the form
           });
 
         if (insertError) {

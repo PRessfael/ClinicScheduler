@@ -22,14 +22,34 @@ const EditProfileForm = ({ userDetails, onClose, onUpdate }) => {
         setLoading(true);
 
         try {
-            const { error } = await supabase
+            // First update the auth metadata
+            const { error: authError } = await supabase.auth.updateUser({
+                data: {
+                    username: formData.username,
+                    display_name: formData.username
+                }
+            });
+
+            if (authError) throw authError;
+
+            // Then update the public users table
+            const { error: dbError } = await supabase
                 .from('users')
                 .update({
                     username: formData.username,
                 })
                 .eq('id', userDetails.id);
 
-            if (error) throw error;
+            if (dbError) {
+                // If database update fails, revert auth metadata
+                await supabase.auth.updateUser({
+                    data: {
+                        username: userDetails.username,
+                        display_name: userDetails.username
+                    }
+                });
+                throw dbError;
+            }
 
             toast({
                 title: "Success",
