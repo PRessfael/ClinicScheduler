@@ -3,6 +3,8 @@ import HeroSection from "@/components/home/HeroSection";
 import ServiceCard from "@/components/home/ServiceCard";
 import InformationSection from "@/components/home/InformationSection";
 import { SERVICES } from "@/lib/constants.jsx";
+import { supabase } from '../config/supabase';
+
 
 const Home = () => {
   return (
