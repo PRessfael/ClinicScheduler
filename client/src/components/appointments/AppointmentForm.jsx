@@ -1,3 +1,14 @@
+// Format a time string (HH:mm or HH:mm:ss) to AM/PM
+function formatTimeToAMPM(timeStr) {
+  if (!timeStr) return '';
+  const [hour, minute] = timeStr.split(':');
+  let h = parseInt(hour, 10);
+  const m = minute;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
 import { format } from "date-fns";
 import { APPOINTMENT_TYPES } from "@/lib/constants.jsx";
 import { useState, useEffect } from 'react';
@@ -250,10 +261,26 @@ const AppointmentForm = ({ onSuccess }) => {
             <span className="font-medium">Doctor's Working Hours:</span> {doctorSchedule.time_slots.split('-')[0]}:00 - {doctorSchedule.time_slots.split('-')[1]}:00
           </p>
           <p className="text-sm text-blue-800 mt-1">
-            <span className="font-medium">Working Days:</span> {doctorSchedule.sched.split('').map(day => {
-              const days = { M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat', Sn: 'Sun' };
-              return days[day] || day;
-            }).join(', ')}
+            <span className="font-medium">Working Days:</span> {
+              (() => {
+                const daysMap = { M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat', Sn: 'Sun' };
+                const codes = [];
+                let i = 0;
+                const sched = doctorSchedule.sched;
+                while (i < sched.length) {
+                  if (sched.startsWith('Th', i)) {
+                    codes.push('Th'); i += 2;
+                  } else if (sched.startsWith('St', i)) {
+                    codes.push('St'); i += 2;
+                  } else if (sched.startsWith('Sn', i)) {
+                    codes.push('Sn'); i += 2;
+                  } else {
+                    codes.push(sched[i]); i += 1;
+                  }
+                }
+                return codes.map(code => daysMap[code] || code).join(', ');
+              })()
+            }
           </p>
         </div>
       )}
@@ -274,9 +301,17 @@ const AppointmentForm = ({ onSuccess }) => {
               <div className="mt-2 text-sm text-red-700">
                 <p>
                   The selected doctor may not be available on this date. They have an unavailability period from{' '}
-                  {format(new Date(doctorAvailability.from_date), 'MMMM d, yyyy')}{' '}
+                  {format(new Date(doctorAvailability.from_date), 'MMMM d, yyyy')}
+                  {doctorAvailability.start_time ? (
+                    <> at {formatTimeToAMPM(doctorAvailability.start_time)}</>
+                  ) : null}
+                  {' '}
                   {doctorAvailability.to_date ? (
-                    <>to {format(new Date(doctorAvailability.to_date), 'MMMM d, yyyy')}</>
+                    <>to {format(new Date(doctorAvailability.to_date), 'MMMM d, yyyy')}
+                      {doctorAvailability.end_time ? (
+                        <> at {formatTimeToAMPM(doctorAvailability.end_time)}</>
+                      ) : null}
+                    </>
                   ) : (
                     'onwards'
                   )}.

@@ -14,7 +14,9 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
     const [formData, setFormData] = useState({
         doctor_id: doctorId || "",
         from_date: "",
-        to_date: ""
+        to_date: "",
+        start_time: "",
+        end_time: ""
     });
 
     useEffect(() => {
@@ -79,7 +81,9 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
         setFormData({
             doctor_id: availability.doctor_id,
             from_date: availability.from_date,
-            to_date: availability.to_date || ""
+            to_date: availability.to_date || "",
+            start_time: availability.start_time || "",
+            end_time: availability.end_time || ""
         });
         setIsAddingAvailability(true);
     };
@@ -122,25 +126,22 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
 
         try {
             let error;
+            const payload = {
+                doctor_id: doctorId || formData.doctor_id,
+                from_date: formData.from_date,
+                to_date: formData.to_date || null,
+                start_time: formData.start_time || null,
+                end_time: formData.end_time || null
+            };
             if (editingAvailability) {
-                // Update existing record
                 ({ error } = await supabase
                     .from('doctor_availability')
-                    .update({
-                        doctor_id: doctorId || formData.doctor_id,
-                        from_date: formData.from_date,
-                        to_date: formData.to_date || null
-                    })
+                    .update(payload)
                     .eq('availability_id', editingAvailability.availability_id));
             } else {
-                // Insert new record
                 ({ error } = await supabase
                     .from('doctor_availability')
-                    .insert({
-                        doctor_id: doctorId || formData.doctor_id,
-                        from_date: formData.from_date,
-                        to_date: formData.to_date || null
-                    }));
+                    .insert(payload));
             }
 
             if (error) throw error;
@@ -170,7 +171,7 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
     const handleCancel = () => {
         setIsAddingAvailability(false);
         setEditingAvailability(null);
-        setFormData({ doctor_id: doctorId || "", from_date: "", to_date: "" });
+        setFormData({ doctor_id: doctorId || "", from_date: "", to_date: "", start_time: "", end_time: "" });
     };
 
     const formatDate = (dateString) => {
@@ -241,6 +242,7 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
                 )}
             </div>
 
+
             {isAddingAvailability ? (
                 <div className="p-6">
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -288,6 +290,32 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
                                     onChange={(e) => setFormData(prev => ({ ...prev, to_date: e.target.value }))}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
                                     min={formData.from_date}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Start Time
+                                </label>
+                                <input
+                                    type="time"
+                                    value={formData.start_time}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    End Time
+                                </label>
+                                <input
+                                    type="time"
+                                    value={formData.end_time}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
+                                    required
                                 />
                             </div>
                         </div>
