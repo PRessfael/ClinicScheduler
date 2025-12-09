@@ -263,22 +263,22 @@ const AppointmentForm = ({ onSuccess }) => {
           <p className="text-sm text-blue-800 mt-1">
             <span className="font-medium">Working Days:</span> {
               (() => {
-                const daysMap = { M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat', Sn: 'Sun' };
+                const labelMap = { Sn: 'Sun', M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat' };
+                const sortOrder = { Sn: 0, M: 1, T: 2, W: 3, Th: 4, F: 5, St: 6 };
                 const codes = [];
+                const sched = doctorSchedule.sched || "";
                 let i = 0;
-                const sched = doctorSchedule.sched;
                 while (i < sched.length) {
-                  if (sched.startsWith('Th', i)) {
-                    codes.push('Th'); i += 2;
-                  } else if (sched.startsWith('St', i)) {
-                    codes.push('St'); i += 2;
-                  } else if (sched.startsWith('Sn', i)) {
-                    codes.push('Sn'); i += 2;
+                  if (sched.startsWith('Th', i) || sched.startsWith('St', i) || sched.startsWith('Sn', i)) {
+                    codes.push(sched.substring(i, i + 2)); i += 2;
                   } else {
                     codes.push(sched[i]); i += 1;
                   }
                 }
-                return codes.map(code => daysMap[code] || code).join(', ');
+                return codes
+                  .sort((a, b) => (sortOrder[a] ?? 99) - (sortOrder[b] ?? 99))
+                  .map(code => labelMap[code] || code)
+                  .join(', ');
               })()
             }
           </p>
@@ -332,6 +332,7 @@ const AppointmentForm = ({ onSuccess }) => {
         setSelectedTime={(time) => setFormData(prev => ({ ...prev, selectedTime: time }))}
         availableTimeSlots={getAvailableTimeSlots()}
         doctorSchedule={doctorSchedule}
+        doctorAvailability={doctorAvailability ? [doctorAvailability] : []}
       />
 
       <div>

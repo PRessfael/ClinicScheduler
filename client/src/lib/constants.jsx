@@ -63,7 +63,6 @@ export const SERVICES = [
 
 export const CLINIC_SERVICES = [
   "Primary healthcare and consultations",
-  "Mental health services",
   "Vaccinations and immunizations",
   "Laboratory services",
   "Sexual health services",
@@ -71,7 +70,7 @@ export const CLINIC_SERVICES = [
 
 export const CLINIC_HOURS = [
   { day: "Monday - Friday", hours: "8:00 AM - 6:00 PM" },
-  { day: "Saturday", hours: "9:00 AM - 2:00 PM" },
+  //{ day: "Saturday", hours: "9:00 AM - 2:00 PM" },
   { day: "Sunday", hours: "Closed" },
 ];
 

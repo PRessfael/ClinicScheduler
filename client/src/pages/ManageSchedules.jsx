@@ -25,6 +25,26 @@ const ManageSchedules = () => {
         { key: 'Sn', label: 'Sun' }
     ];
 
+    const DAY_ORDER = { Sn: 0, M: 1, T: 2, W: 3, Th: 4, F: 5, St: 6 };
+
+    const parseSchedCodes = (schedString = "") => {
+        const codes = [];
+        let i = 0;
+        while (i < schedString.length) {
+            if (schedString.startsWith('Th', i) || schedString.startsWith('St', i) || schedString.startsWith('Sn', i)) {
+                codes.push(schedString.substring(i, i + 2));
+                i += 2;
+            } else {
+                codes.push(schedString[i]);
+                i += 1;
+            }
+        }
+        return codes;
+    };
+
+    const serializeSchedCodes = (codes = []) =>
+        [...codes].sort((a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99)).join('');
+
     const fetchDoctors = async () => {
         try {
             const { data, error } = await supabase
@@ -189,29 +209,11 @@ const ManageSchedules = () => {
     };
 
     const formatWeekdays = (schedString) => {
-        let formattedDays = [];
-        let i = 0;
-        while (i < schedString.length) {
-            // Check for two-character days first
-            if (i + 1 < schedString.length) {
-                const twoCharDay = schedString.substring(i, i + 2);
-                if (twoCharDay === 'Th' || twoCharDay === 'St' || twoCharDay === 'Sn') {
-                    const dayObj = DAYS.find(d => d.key === twoCharDay);
-                    if (dayObj) {
-                        formattedDays.push(dayObj.label);
-                        i += 2;
-                        continue;
-                    }
-                }
-            }
-            // Handle single-character days
-            const dayObj = DAYS.find(d => d.key === schedString[i]);
-            if (dayObj) {
-                formattedDays.push(dayObj.label);
-            }
-            i++;
-        }
-        return formattedDays.join(', ');
+        const codes = parseSchedCodes(schedString);
+        return codes
+            .sort((a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99))
+            .map(code => DAYS.find(d => d.key === code)?.label || code)
+            .join(', ');
     };
 
     if (loading) {
@@ -261,24 +263,28 @@ const ManageSchedules = () => {
                                 Working Days
                             </label>
                             <div className="flex flex-wrap gap-2">
-                                {DAYS.map((day) => (
-                                    <button
-                                        key={day.key}
-                                        type="button"
-                                        className={`px-3 py-1 rounded ${newSchedule.sched.includes(day.key)
-                                            ? "bg-[#1e5631] text-white"
-                                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                            }`}
-                                        onClick={() => {
-                                            const updatedDays = newSchedule.sched.includes(day.key)
-                                                ? newSchedule.sched.replace(day.key, '')
-                                                : newSchedule.sched + day.key;
-                                            setNewSchedule({ ...newSchedule, sched: updatedDays });
-                                        }}
-                                    >
-                                        {day.label}
-                                    </button>
-                                ))}
+                                {DAYS.map((day) => {
+                                    const selectedCodes = parseSchedCodes(newSchedule.sched);
+                                    const isSelected = selectedCodes.includes(day.key);
+                                    return (
+                                        <button
+                                            key={day.key}
+                                            type="button"
+                                            className={`px-3 py-1 rounded ${isSelected
+                                                ? "bg-[#1e5631] text-white"
+                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                }`}
+                                            onClick={() => {
+                                                const updatedCodes = isSelected
+                                                    ? selectedCodes.filter(code => code !== day.key)
+                                                    : [...selectedCodes, day.key];
+                                                setNewSchedule({ ...newSchedule, sched: serializeSchedCodes(updatedCodes) });
+                                            }}
+                                        >
+                                            {day.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -338,24 +344,28 @@ const ManageSchedules = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {editingSchedule?.schedule_id === schedule.schedule_id ? (
                                             <div className="flex flex-wrap gap-2">
-                                                {DAYS.map((day) => (
-                                                    <button
-                                                        key={day.key}
-                                                        type="button"
-                                                        className={`px-2 py-1 rounded text-xs ${editingSchedule.sched.includes(day.key)
-                                                            ? "bg-[#1e5631] text-white"
-                                                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                                            }`}
-                                                        onClick={() => {
-                                                            const updatedDays = editingSchedule.sched.includes(day.key)
-                                                                ? editingSchedule.sched.replace(day.key, '')
-                                                                : editingSchedule.sched + day.key;
-                                                            setEditingSchedule({ ...editingSchedule, sched: updatedDays });
-                                                        }}
-                                                    >
-                                                        {day.label}
-                                                    </button>
-                                                ))}
+                                                {DAYS.map((day) => {
+                                                    const selectedCodes = parseSchedCodes(editingSchedule.sched || "");
+                                                    const isSelected = selectedCodes.includes(day.key);
+                                                    return (
+                                                        <button
+                                                            key={day.key}
+                                                            type="button"
+                                                            className={`px-2 py-1 rounded text-xs ${isSelected
+                                                                ? "bg-[#1e5631] text-white"
+                                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                                }`}
+                                                            onClick={() => {
+                                                                const updatedCodes = isSelected
+                                                                    ? selectedCodes.filter(code => code !== day.key)
+                                                                    : [...selectedCodes, day.key];
+                                                                setEditingSchedule({ ...editingSchedule, sched: serializeSchedCodes(updatedCodes) });
+                                                            }}
+                                                        >
+                                                            {day.label}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         ) : (
                                             formatWeekdays(schedule.sched)

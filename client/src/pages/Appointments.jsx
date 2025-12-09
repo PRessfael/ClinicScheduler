@@ -74,12 +74,12 @@ const Appointments = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold">My Appointments</h1>
         {hasPatientProfile && (
           <button
             onClick={() => setShowForm(true)}
-            className="bg-[#1e5631] text-white px-6 py-2 rounded-md hover:bg-[#143e22] transition-colors"
+            className="w-full sm:w-auto bg-[#1e5631] text-white px-6 py-2 rounded-md hover:bg-[#143e22] transition-colors"
           >
             Book Appointment
           </button>
