@@ -7,9 +7,26 @@ import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
 import DeleteWarning from "../../components/ui/DeleteWarning";
 import DoctorScheduleTable from "../../components/ui/DoctorScheduleTable";
 import DoctorAvailabilityTable from "../../components/ui/DoctorAvailabilityTable";
+import { useLocation } from "wouter";
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!loading && (!user || user.user_type !== "admin")) {
+      setLocation("/not-found");
+    }
+  }, [user, loading, setLocation]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,

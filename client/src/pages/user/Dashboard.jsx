@@ -4,9 +4,25 @@ import { supabase } from "../../lib/supabase";
 import RecordsTable from "../../components/records/RecordsTable";
 import PatientProfileWarning from "@/components/ui/PatientProfileWarning";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
+import { useLocation } from "wouter";
 
 const UserDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.user_type !== "user")) {
+      setLocation("/not-found");
+    }
+  }, [user, authLoading, setLocation]);
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
   const [records, setRecords] = useState([]);
   const [pendingAppointments, setPendingAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
