@@ -12,8 +12,5 @@ December 5, 2025 Changes:
 "
 
 
-- Allow doctors to set unavailability for specific time blocks (date, start time, end time) in the UI:
-    Make when whole days e.g. 2 days timeoff it doesnt require time blocks or default it to the whole days
 
-- Fix the doctor schedule and reflect it in the calendar for doctors
 

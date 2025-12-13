@@ -74,26 +74,34 @@ const DoctorDashboard = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const { count: totalCount, error: totalError } = await supabase
-          .from("appointments")
-          .select("appointment_id", { count: "exact" });
+        const [
+          { count: confirmedCount },
+          { count: cancelledCount }
+        ] = await Promise.all([
+          supabase
+            .from("appointments")
+            .select("appointment_id", { count: "exact" })
+            .eq("status", "confirmed"),
+          supabase
+            .from("appointments")
+            .select("appointment_id", { count: "exact" })
+            .eq("status", "cancelled")
+        ]);
 
-        if (totalError) throw totalError;
-        console.log("Total Appointments Query Result:", totalCount);
-
-        const { count: pendingCount, error: pendingError } = await supabase
+        const { count: queueCount, error: queueError } = await supabase
           .from("appointment_queue")
           .select("queue_id", { count: "exact" });
 
-        if (pendingError) throw pendingError;
-        console.log("Pending Appointments Query Result:", pendingCount);
+        if (queueError) throw queueError;
+
+        const totalAppointments = (confirmedCount || 0) + (cancelledCount || 0) + (queueCount || 0);
 
         setStats(prevStats => ({
           ...prevStats,
-          totalAppointments: (totalCount || 0) + (pendingCount || 0),
+          totalAppointments,
         }));
       } catch (error) {
-        console.error("Error fetching total appointments including pending:", error);
+        console.error("Error fetching total appointments:", error);
       }
     };
 

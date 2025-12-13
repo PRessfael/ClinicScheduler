@@ -269,14 +269,9 @@ const AdminDashboard = () => {
 
       // Get appointments with different statuses
       const [
-        { count: pendingCount },
         { count: confirmedCount },
         { count: cancelledCount }
       ] = await Promise.all([
-        supabase
-          .from("appointments")
-          .select("appointment_id", { count: "exact" })
-          .eq("status", "pending"),
         supabase
           .from("appointments")
           .select("appointment_id", { count: "exact" })
@@ -287,7 +282,7 @@ const AdminDashboard = () => {
           .eq("status", "cancelled")
       ]);
 
-      // Get queue entries (these are also pending appointments)
+      // Get queue entries (these are the only pending appointments)
       const { count: queueCount, error: queueError } = await supabase
         .from("appointment_queue")
         .select("queue_id", { count: "exact" });
@@ -295,9 +290,7 @@ const AdminDashboard = () => {
       if (queueError) throw queueError;
 
       // Calculate total appointments including queue entries
-      const totalPendingAppointments = (pendingCount || 0) + (queueCount || 0);
       const totalAppointments =
-        (pendingCount || 0) +
         (confirmedCount || 0) +
         (cancelledCount || 0) +
         (queueCount || 0);
@@ -305,7 +298,7 @@ const AdminDashboard = () => {
       setStats({
         totalPatients: patientsCount || 0,
         totalAppointments,
-        pendingAppointments: totalPendingAppointments,
+        pendingAppointments: queueCount || 0,
         confirmedAppointments: confirmedCount || 0,
         cancelledAppointments: cancelledCount || 0
       });

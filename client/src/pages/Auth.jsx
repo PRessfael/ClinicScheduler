@@ -35,7 +35,7 @@ const Auth = ({ type = "login" }) => {
     const errors = {};
 
     if (!formData.username.trim()) {
-      errors.username = "Username is required";
+      errors.username = "Username/Email is required";
     }
     if (!formData.password) {
       errors.password = "Password is required";
@@ -138,7 +138,7 @@ const Auth = ({ type = "login" }) => {
                 <span className="block sm:inline">{formErrors.general}</span>
               </div>
             )}            <div>              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-              {isLogin ? "Username or email" : "Username"}
+              {isLogin ? "Username or Email" : "Username"}
             </label>
               <input
                 id="username"
@@ -257,14 +257,6 @@ const Auth = ({ type = "login" }) => {
                   )}
                 </div>
               </>
-            )}
-
-            {isLogin && (
-              <div className="flex items-center justify-end">
-                <a href="#" className="text-sm text-[#1e5631] hover:underline">
-                  Forgot your password?
-                </a>
-              </div>
             )}
 
             <div>

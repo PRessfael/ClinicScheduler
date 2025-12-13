@@ -126,21 +126,26 @@ const AppointmentForm = ({ onSuccess }) => {
   const getAvailableTimeSlots = () => {
     if (!doctorSchedule) {
       // Default time slots if no doctor selected (9 AM to 5 PM)
-      return Array.from({ length: 9 }, (_, i) => ({
-        time: `${i + 9}:00`,
-        available: true,
-        label: `${i + 9}:00 ${i + 9 < 12 ? 'AM' : 'PM'}`
-      }));
+      return Array.from({ length: 9 }, (_, i) => {
+        const hour = i + 9;
+        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+        return {
+          time: timeStr,
+          available: true,
+          label: formatTimeToAMPM(timeStr)
+        };
+      });
     }
 
     const [start, end] = doctorSchedule.time_slots.split('-').map(Number);
     // Add 1 to include the end time
     return Array.from({ length: end - start + 1 }, (_, i) => {
       const hour = start + i;
+      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
       return {
-        time: `${hour}:00`,
+        time: timeStr,
         available: true,
-        label: `${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`
+        label: formatTimeToAMPM(timeStr)
       };
     });
   };
@@ -258,7 +263,11 @@ const AppointmentForm = ({ onSuccess }) => {
       {doctorSchedule && (
         <div className="bg-blue-50 p-4 rounded-md">
           <p className="text-sm text-blue-800">
-            <span className="font-medium">Doctor's Working Hours:</span> {doctorSchedule.time_slots.split('-')[0]}:00 - {doctorSchedule.time_slots.split('-')[1]}:00
+            <span className="font-medium">Doctor's Working Hours:</span> {
+              formatTimeToAMPM(doctorSchedule.time_slots.split('-')[0].padStart(2, '0') + ':00')
+            } - {
+              formatTimeToAMPM(doctorSchedule.time_slots.split('-')[1].padStart(2, '0') + ':00')
+            }
           </p>
           <p className="text-sm text-blue-800 mt-1">
             <span className="font-medium">Working Days:</span> {
