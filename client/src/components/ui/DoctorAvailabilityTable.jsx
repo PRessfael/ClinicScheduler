@@ -228,14 +228,14 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
 
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-            <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">
+            <div className="bg-gray-50 px-6 py-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <h2 className="text-xl font-semibold text-gray-800 text-center sm:text-left">
                     {doctorId ? "My Unavailability Periods" : "Doctor Unavailability Periods"}
                 </h2>
                 {!isAddingAvailability && (
                     <button
                         onClick={() => setIsAddingAvailability(true)}
-                        className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
+                        className="w-full sm:w-auto bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d] text-center"
                     >
                         Add Unavailability Period
                     </button>
