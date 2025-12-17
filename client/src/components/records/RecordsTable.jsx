@@ -1,4 +1,5 @@
-import { RECORD_TYPES, SORT_OPTIONS } from "@/lib/constants.jsx";
+import { SORT_OPTIONS } from "@/lib/constants.jsx";
+import { useState } from "react";
 
 const RecordsTable = ({
   records,
@@ -7,18 +8,29 @@ const RecordsTable = ({
   setSearchTerm = () => {},
   setSortOrder = () => {}
 }) => {
-  // Filter records by diagnosis search
-  let filteredRecords = records.filter(
-    (record) =>
-      !searchTerm ||
-      (record.diagnosis && record.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Local fallbacks when parent doesn't control state
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm ?? "");
+  const [localSortOrder, setLocalSortOrder] = useState(sortOrder ?? "newest");
+
+  const currentSearch = searchTerm ?? localSearchTerm;
+  const currentSortOrder = sortOrder ?? localSortOrder;
+
+  // Filter records by diagnosis search (case-insensitive)
+  let filteredRecords = records.filter((record) => {
+    if (!currentSearch) return true;
+    const diagnosis = String(record?.diagnosis ?? "").toLowerCase();
+    return diagnosis.includes(currentSearch.toLowerCase());
+  });
 
   // Sort records by newest/oldest
-  if (sortOrder === "newest") {
-    filteredRecords = filteredRecords.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  } else if (sortOrder === "oldest") {
-    filteredRecords = filteredRecords.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  if (currentSortOrder === "newest") {
+    filteredRecords = filteredRecords.sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+  } else if (currentSortOrder === "oldest") {
+    filteredRecords = filteredRecords.sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
   }
 
   return (
@@ -30,8 +42,12 @@ const RecordsTable = ({
             type="text"
             placeholder="Search diagnosis..."
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={currentSearch}
+            onChange={(e) => {
+              const val = e.target.value;
+              setLocalSearchTerm(val);
+              setSearchTerm(val);
+            }}
           />
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg
@@ -54,8 +70,12 @@ const RecordsTable = ({
           <div>
             <select
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1e5631] focus:border-[#1e5631]"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
+              value={currentSortOrder}
+              onChange={(e) => {
+                const val = e.target.value;
+                setLocalSortOrder(val);
+                setSortOrder(val);
+              }}
             >
               {SORT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>

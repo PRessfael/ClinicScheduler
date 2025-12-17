@@ -210,7 +210,7 @@ const Profile = () => {
                                 <div className="space-y-3">
                                     <div>
                                         <span className="text-gray-600 font-medium">Age:</span>
-                                        <span className="ml-2 text-gray-800">{patientDetails.age || 'Not provided'}</span>
+                                        <span className="ml-2 text-gray-800">{patientDetails.age ?? 'Not provided'}</span>
                                     </div>
                                 </div>
                             </div>
