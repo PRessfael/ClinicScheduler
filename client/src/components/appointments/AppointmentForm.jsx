@@ -1,3 +1,14 @@
+// Format a time string (HH:mm or HH:mm:ss) to AM/PM
+function formatTimeToAMPM(timeStr) {
+  if (!timeStr) return '';
+  const [hour, minute] = timeStr.split(':');
+  let h = parseInt(hour, 10);
+  const m = minute;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
 import { format } from "date-fns";
 import { APPOINTMENT_TYPES } from "@/lib/constants.jsx";
 import { useState, useEffect } from 'react';
@@ -115,21 +126,26 @@ const AppointmentForm = ({ onSuccess }) => {
   const getAvailableTimeSlots = () => {
     if (!doctorSchedule) {
       // Default time slots if no doctor selected (9 AM to 5 PM)
-      return Array.from({ length: 9 }, (_, i) => ({
-        time: `${i + 9}:00`,
-        available: true,
-        label: `${i + 9}:00 ${i + 9 < 12 ? 'AM' : 'PM'}`
-      }));
+      return Array.from({ length: 9 }, (_, i) => {
+        const hour = i + 9;
+        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+        return {
+          time: timeStr,
+          available: true,
+          label: formatTimeToAMPM(timeStr)
+        };
+      });
     }
 
     const [start, end] = doctorSchedule.time_slots.split('-').map(Number);
     // Add 1 to include the end time
     return Array.from({ length: end - start + 1 }, (_, i) => {
       const hour = start + i;
+      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
       return {
-        time: `${hour}:00`,
+        time: timeStr,
         available: true,
-        label: `${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`
+        label: formatTimeToAMPM(timeStr)
       };
     });
   };
@@ -247,13 +263,33 @@ const AppointmentForm = ({ onSuccess }) => {
       {doctorSchedule && (
         <div className="bg-blue-50 p-4 rounded-md">
           <p className="text-sm text-blue-800">
-            <span className="font-medium">Doctor's Working Hours:</span> {doctorSchedule.time_slots.split('-')[0]}:00 - {doctorSchedule.time_slots.split('-')[1]}:00
+            <span className="font-medium">Doctor's Working Hours:</span> {
+              formatTimeToAMPM(doctorSchedule.time_slots.split('-')[0].padStart(2, '0') + ':00')
+            } - {
+              formatTimeToAMPM(doctorSchedule.time_slots.split('-')[1].padStart(2, '0') + ':00')
+            }
           </p>
           <p className="text-sm text-blue-800 mt-1">
-            <span className="font-medium">Working Days:</span> {doctorSchedule.sched.split('').map(day => {
-              const days = { M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat', Sn: 'Sun' };
-              return days[day] || day;
-            }).join(', ')}
+            <span className="font-medium">Working Days:</span> {
+              (() => {
+                const labelMap = { Sn: 'Sun', M: 'Mon', T: 'Tue', W: 'Wed', Th: 'Thu', F: 'Fri', St: 'Sat' };
+                const sortOrder = { Sn: 0, M: 1, T: 2, W: 3, Th: 4, F: 5, St: 6 };
+                const codes = [];
+                const sched = doctorSchedule.sched || "";
+                let i = 0;
+                while (i < sched.length) {
+                  if (sched.startsWith('Th', i) || sched.startsWith('St', i) || sched.startsWith('Sn', i)) {
+                    codes.push(sched.substring(i, i + 2)); i += 2;
+                  } else {
+                    codes.push(sched[i]); i += 1;
+                  }
+                }
+                return codes
+                  .sort((a, b) => (sortOrder[a] ?? 99) - (sortOrder[b] ?? 99))
+                  .map(code => labelMap[code] || code)
+                  .join(', ');
+              })()
+            }
           </p>
         </div>
       )}
@@ -274,9 +310,17 @@ const AppointmentForm = ({ onSuccess }) => {
               <div className="mt-2 text-sm text-red-700">
                 <p>
                   The selected doctor may not be available on this date. They have an unavailability period from{' '}
-                  {format(new Date(doctorAvailability.from_date), 'MMMM d, yyyy')}{' '}
+                  {format(new Date(doctorAvailability.from_date), 'MMMM d, yyyy')}
+                  {doctorAvailability.start_time ? (
+                    <> at {formatTimeToAMPM(doctorAvailability.start_time)}</>
+                  ) : null}
+                  {' '}
                   {doctorAvailability.to_date ? (
-                    <>to {format(new Date(doctorAvailability.to_date), 'MMMM d, yyyy')}</>
+                    <>to {format(new Date(doctorAvailability.to_date), 'MMMM d, yyyy')}
+                      {doctorAvailability.end_time ? (
+                        <> at {formatTimeToAMPM(doctorAvailability.end_time)}</>
+                      ) : null}
+                    </>
                   ) : (
                     'onwards'
                   )}.
@@ -297,6 +341,7 @@ const AppointmentForm = ({ onSuccess }) => {
         setSelectedTime={(time) => setFormData(prev => ({ ...prev, selectedTime: time }))}
         availableTimeSlots={getAvailableTimeSlots()}
         doctorSchedule={doctorSchedule}
+        doctorAvailability={doctorAvailability ? [doctorAvailability] : []}
       />
 
       <div>

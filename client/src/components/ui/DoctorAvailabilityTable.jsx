@@ -14,7 +14,9 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
     const [formData, setFormData] = useState({
         doctor_id: doctorId || "",
         from_date: "",
-        to_date: ""
+        to_date: "",
+        start_time: "",
+        end_time: ""
     });
 
     useEffect(() => {
@@ -79,7 +81,9 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
         setFormData({
             doctor_id: availability.doctor_id,
             from_date: availability.from_date,
-            to_date: availability.to_date || ""
+            to_date: availability.to_date || "",
+            start_time: availability.start_time || "",
+            end_time: availability.end_time || ""
         });
         setIsAddingAvailability(true);
     };
@@ -122,25 +126,22 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
 
         try {
             let error;
+            const payload = {
+                doctor_id: doctorId || formData.doctor_id,
+                from_date: formData.from_date,
+                to_date: formData.to_date || null,
+                start_time: formData.start_time || null,
+                end_time: formData.end_time || null
+            };
             if (editingAvailability) {
-                // Update existing record
                 ({ error } = await supabase
                     .from('doctor_availability')
-                    .update({
-                        doctor_id: doctorId || formData.doctor_id,
-                        from_date: formData.from_date,
-                        to_date: formData.to_date || null
-                    })
+                    .update(payload)
                     .eq('availability_id', editingAvailability.availability_id));
             } else {
-                // Insert new record
                 ({ error } = await supabase
                     .from('doctor_availability')
-                    .insert({
-                        doctor_id: doctorId || formData.doctor_id,
-                        from_date: formData.from_date,
-                        to_date: formData.to_date || null
-                    }));
+                    .insert(payload));
             }
 
             if (error) throw error;
@@ -170,7 +171,7 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
     const handleCancel = () => {
         setIsAddingAvailability(false);
         setEditingAvailability(null);
-        setFormData({ doctor_id: doctorId || "", from_date: "", to_date: "" });
+        setFormData({ doctor_id: doctorId || "", from_date: "", to_date: "", start_time: "", end_time: "" });
     };
 
     const formatDate = (dateString) => {
@@ -227,19 +228,20 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
 
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-            <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">
+            <div className="bg-gray-50 px-6 py-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <h2 className="text-xl font-semibold text-gray-800 text-center sm:text-left">
                     {doctorId ? "My Unavailability Periods" : "Doctor Unavailability Periods"}
                 </h2>
                 {!isAddingAvailability && (
                     <button
                         onClick={() => setIsAddingAvailability(true)}
-                        className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
+                        className="w-full sm:w-auto bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d] text-center"
                     >
                         Add Unavailability Period
                     </button>
                 )}
             </div>
+
 
             {isAddingAvailability ? (
                 <div className="p-6">
@@ -288,6 +290,32 @@ const DoctorAvailabilityTable = ({ doctorId }) => {
                                     onChange={(e) => setFormData(prev => ({ ...prev, to_date: e.target.value }))}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
                                     min={formData.from_date}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Start Time
+                                </label>
+                                <input
+                                    type="time"
+                                    value={formData.start_time}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    End Time
+                                </label>
+                                <input
+                                    type="time"
+                                    value={formData.end_time}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1e5631] focus:ring-[#1e5631] sm:text-sm"
+                                    required
                                 />
                             </div>
                         </div>

@@ -7,7 +7,8 @@ const AppointmentCalendar = ({
   selectedTime,
   setSelectedTime,
   availableTimeSlots,
-  doctorSchedule
+  doctorSchedule,
+  doctorAvailability = []
 }) => {
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const MONTHS = [
@@ -49,15 +50,34 @@ const AppointmentCalendar = ({
   };
 
   const isDayAvailable = (day) => {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    const dateStr = format(date, 'yyyy-MM-dd');
+
+    // If doctorAvailability is passed and includes a full-day block, disable those dates
+    if (doctorAvailability.some(a => !a.start_time && !a.end_time && dateStr >= a.from_date && (!a.to_date || dateStr <= a.to_date))) {
+      return false;
+    }
+
     if (!doctorSchedule) return true;
 
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const dayOfWeek = format(date, 'EEEE').toLowerCase();
 
-    // Convert schedule string to array of available days
-    const schedDays = doctorSchedule.sched.split('');
-    const availableDays = schedDays.map(day => {
-      switch (day) {
+    // Parse schedule string supporting multi-letter codes
+    const schedCodes = [];
+    const sched = doctorSchedule.sched || "";
+    let i = 0;
+    while (i < sched.length) {
+      if (sched.startsWith('Th', i) || sched.startsWith('St', i) || sched.startsWith('Sn', i)) {
+        schedCodes.push(sched.substring(i, i + 2));
+        i += 2;
+      } else {
+        schedCodes.push(sched[i]);
+        i += 1;
+      }
+    }
+
+    const codeToDay = (code) => {
+      switch (code) {
         case 'M': return 'monday';
         case 'T': return 'tuesday';
         case 'W': return 'wednesday';
@@ -67,7 +87,9 @@ const AppointmentCalendar = ({
         case 'Sn': return 'sunday';
         default: return '';
       }
-    });
+    };
+
+    const availableDays = schedCodes.map(codeToDay).filter(Boolean);
 
     return availableDays.includes(dayOfWeek);
   };
@@ -222,7 +244,7 @@ const AppointmentCalendar = ({
                 onClick={() => slot.available && handleTimeClick(slot.time)}
                 disabled={!slot.available}
               >
-                <span>{slot.time}</span>
+                <span>{slot.label}</span>
                 {selectedTime === slot.time && (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

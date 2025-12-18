@@ -7,9 +7,26 @@ import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
 import DeleteWarning from "../../components/ui/DeleteWarning";
 import DoctorScheduleTable from "../../components/ui/DoctorScheduleTable";
 import DoctorAvailabilityTable from "../../components/ui/DoctorAvailabilityTable";
+import { useLocation } from "wouter";
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!loading && (!user || user.user_type !== "admin")) {
+      setLocation("/not-found");
+    }
+  }, [user, loading, setLocation]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalAppointments: 0,
@@ -113,9 +130,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (page = currentPage) => {
     try {
-      const from = (currentPage - 1) * patientsPerPage;
+      const from = (page - 1) * patientsPerPage;
       const to = from + patientsPerPage - 1;
 
       // Get paginated records with total count
@@ -254,7 +271,7 @@ const AdminDashboard = () => {
   const handlePageChange = async (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
-      await fetchPatients();
+      await fetchPatients(newPage);
     }
   };
 
@@ -269,14 +286,9 @@ const AdminDashboard = () => {
 
       // Get appointments with different statuses
       const [
-        { count: pendingCount },
         { count: confirmedCount },
         { count: cancelledCount }
       ] = await Promise.all([
-        supabase
-          .from("appointments")
-          .select("appointment_id", { count: "exact" })
-          .eq("status", "pending"),
         supabase
           .from("appointments")
           .select("appointment_id", { count: "exact" })
@@ -287,7 +299,7 @@ const AdminDashboard = () => {
           .eq("status", "cancelled")
       ]);
 
-      // Get queue entries (these are also pending appointments)
+      // Get queue entries (these are the only pending appointments)
       const { count: queueCount, error: queueError } = await supabase
         .from("appointment_queue")
         .select("queue_id", { count: "exact" });
@@ -295,9 +307,7 @@ const AdminDashboard = () => {
       if (queueError) throw queueError;
 
       // Calculate total appointments including queue entries
-      const totalPendingAppointments = (pendingCount || 0) + (queueCount || 0);
       const totalAppointments =
-        (pendingCount || 0) +
         (confirmedCount || 0) +
         (cancelledCount || 0) +
         (queueCount || 0);
@@ -305,7 +315,7 @@ const AdminDashboard = () => {
       setStats({
         totalPatients: patientsCount || 0,
         totalAppointments,
-        pendingAppointments: totalPendingAppointments,
+        pendingAppointments: queueCount || 0,
         confirmedAppointments: confirmedCount || 0,
         cancelledAppointments: cancelledCount || 0
       });
@@ -443,24 +453,24 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
-          <div className="bg-gray-50 px-6 py-3 border-t flex items-center justify-between">
+          <div className="bg-gray-50 px-6 py-3 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <button
-              className="bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
+              className="w-full sm:w-auto bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d]"
               onClick={handleAddPatient}
             >
               New Patient Record
             </button>
-            <div className="flex items-center">
-              <div className="text-sm text-gray-700 mr-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="text-sm text-gray-700">
                 Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
                 <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span> of{" "}
                 <span className="font-medium">{totalRecords}</span> patients
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-col xs:flex-row sm:flex-row gap-2">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-3 py-1 border rounded-md text-sm font-medium ${currentPage === 1
+                  className={`w-full xs:w-auto sm:w-auto px-3 py-1 border rounded-md text-sm font-medium ${currentPage === 1
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-white text-gray-700 hover:bg-gray-50"
                     }`}
@@ -470,7 +480,7 @@ const AdminDashboard = () => {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= totalPages}
-                  className={`px-3 py-1 border rounded-md text-sm font-medium ${currentPage >= totalPages
+                  className={`w-full xs:w-auto sm:w-auto px-3 py-1 border rounded-md text-sm font-medium ${currentPage >= totalPages
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-white text-gray-700 hover:bg-gray-50"
                     }`}

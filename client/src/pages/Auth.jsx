@@ -35,10 +35,13 @@ const Auth = ({ type = "login" }) => {
     const errors = {};
 
     if (!formData.username.trim()) {
-      errors.username = "Username is required";
-    } if (!formData.password) {
+      errors.username = "Username/Email is required";
+    }
+    if (!formData.password) {
       errors.password = "Password is required";
-    } else if (formData.password.length < 6) {
+    }
+    // Only check password length for registration
+    if (!isLogin && formData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
     }
 
@@ -135,7 +138,7 @@ const Auth = ({ type = "login" }) => {
                 <span className="block sm:inline">{formErrors.general}</span>
               </div>
             )}            <div>              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-              {isLogin ? "Username or email" : "Username"}
+              {isLogin ? "Username or Email" : "Username"}
             </label>
               <input
                 id="username"
@@ -254,14 +257,6 @@ const Auth = ({ type = "login" }) => {
                   )}
                 </div>
               </>
-            )}
-
-            {isLogin && (
-              <div className="flex items-center justify-end">
-                <a href="#" className="text-sm text-[#1e5631] hover:underline">
-                  Forgot your password?
-                </a>
-              </div>
             )}
 
             <div>

@@ -203,7 +203,7 @@ const AddPatientPopup = ({ onClose, onSave }) => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name"
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#1e5631] focus:border-[#1e5631] sm:text-sm py-2"
               />
               {formErrors.patientId && (
                 <p className="mt-1 text-sm text-red-500">{formErrors.patientId}</p>

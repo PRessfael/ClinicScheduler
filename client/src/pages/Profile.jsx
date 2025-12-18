@@ -2,10 +2,13 @@ import { useAuth } from "../hooks/useAuth";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import EditProfileForm from "@/components/profile/EditProfileForm";
+import ChangePasswordForm from "@/components/profile/ChangePasswordForm";
+
 
 const Profile = () => {
     const { user } = useAuth();
     const [userDetails, setUserDetails] = useState(null);
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [patientDetails, setPatientDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showEditForm, setShowEditForm] = useState(false);
@@ -172,7 +175,10 @@ const Profile = () => {
                                     >
                                         Edit Profile
                                     </button>
-                                    <button className="w-full border border-[#1e5631] text-[#1e5631] px-4 py-2 rounded-md hover:bg-[#f0f9f1] transition-colors">
+                                    <button 
+                                        onClick={() => setShowPasswordForm(true)}
+                                        className="w-full border border-[#1e5631] text-[#1e5631] px-4 py-2 rounded-md hover:bg-[#f0f9f1] transition-colors"
+                                    >
                                         Change Password
                                     </button>
                                 </div>
@@ -204,7 +210,7 @@ const Profile = () => {
                                 <div className="space-y-3">
                                     <div>
                                         <span className="text-gray-600 font-medium">Age:</span>
-                                        <span className="ml-2 text-gray-800">{patientDetails.age || 'Not provided'}</span>
+                                        <span className="ml-2 text-gray-800">{patientDetails.age ?? 'Not provided'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -221,6 +227,11 @@ const Profile = () => {
                     userDetails={userDetails}
                     onClose={() => setShowEditForm(false)}
                     onUpdate={handleUpdateProfile}
+                />
+            )}
+            {showPasswordForm && (
+                <ChangePasswordForm
+                    onClose={() => setShowPasswordForm(false)}
                 />
             )}
         </div>

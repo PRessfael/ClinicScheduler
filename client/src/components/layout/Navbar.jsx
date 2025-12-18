@@ -32,7 +32,7 @@ const Navbar = () => {
       // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
-        { href: "/doctor/dashboard", label: "Clinic Dashboard" },
+        { href: "/doctor/dashboard", label: "Doctor Dashboard" },
         { href: "/appointment-dashboard", label: "Appointments" },
       ];
     } else {

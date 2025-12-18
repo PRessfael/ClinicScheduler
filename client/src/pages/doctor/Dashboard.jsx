@@ -6,9 +6,26 @@ import ViewPatientDetails from "../../components/ui/ViewPatientDetails";
 import DeleteWarning from "../../components/ui/DeleteWarning";
 import AddPatientPopup from "../../components/ui/AddPatientPopup";
 import DoctorAvailabilityTable from "../../components/ui/DoctorAvailabilityTable";
+import { useLocation } from "wouter";
 
 const DoctorDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!loading && (!user || user.user_type !== "doctor")) {
+      setLocation("/not-found");
+    }
+  }, [user, loading, setLocation]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   const [doctorId, setDoctorId] = useState(null);
   const [stats, setStats] = useState({
     totalPatients: 0,
@@ -74,26 +91,34 @@ const DoctorDashboard = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const { count: totalCount, error: totalError } = await supabase
-          .from("appointments")
-          .select("appointment_id", { count: "exact" });
+        const [
+          { count: confirmedCount },
+          { count: cancelledCount }
+        ] = await Promise.all([
+          supabase
+            .from("appointments")
+            .select("appointment_id", { count: "exact" })
+            .eq("status", "confirmed"),
+          supabase
+            .from("appointments")
+            .select("appointment_id", { count: "exact" })
+            .eq("status", "cancelled")
+        ]);
 
-        if (totalError) throw totalError;
-        console.log("Total Appointments Query Result:", totalCount);
-
-        const { count: pendingCount, error: pendingError } = await supabase
+        const { count: queueCount, error: queueError } = await supabase
           .from("appointment_queue")
           .select("queue_id", { count: "exact" });
 
-        if (pendingError) throw pendingError;
-        console.log("Pending Appointments Query Result:", pendingCount);
+        if (queueError) throw queueError;
+
+        const totalAppointments = (confirmedCount || 0) + (cancelledCount || 0) + (queueCount || 0);
 
         setStats(prevStats => ({
           ...prevStats,
-          totalAppointments: (totalCount || 0) + (pendingCount || 0),
+          totalAppointments,
         }));
       } catch (error) {
-        console.error("Error fetching total appointments including pending:", error);
+        console.error("Error fetching total appointments:", error);
       }
     };
 
@@ -228,9 +253,9 @@ const DoctorDashboard = () => {
     refreshStats();
   };
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (page = currentPage) => {
     try {
-      const from = (currentPage - 1) * patientsPerPage;
+      const from = (page - 1) * patientsPerPage;
       const to = from + patientsPerPage - 1;
 
       // Get paginated records
@@ -258,7 +283,7 @@ const DoctorDashboard = () => {
         setTotalRecords(count || 0);
         // If we're on a page higher than the total pages, go back to the last valid page
         const maxPage = Math.ceil((count || 0) / patientsPerPage);
-        if (currentPage > maxPage && maxPage > 0) {
+        if (page > maxPage && maxPage > 0) {
           setCurrentPage(maxPage);
         }
         return;
@@ -282,6 +307,14 @@ const DoctorDashboard = () => {
       console.error("Error fetching patient records:", error);
     }
   };
+
+  const handlePageChange = async (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      await fetchPatients(newPage);
+    }
+  };
+
   useEffect(() => {
     fetchPatients();
   }, [currentPage, patientsPerPage]); // Refetch when page changes or number of patients per page changes
@@ -399,25 +432,27 @@ const DoctorDashboard = () => {
             </table>
           </div>
           {/* Pagination Controls */}
-          <div className="px-6 py-4 flex justify-between items-center bg-gray-50 border-t">            <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
-            <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span>{" "}
-            of <span className="font-medium">{totalRecords}</span> results
-          </div>
-            <div className="flex space-x-2">              <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 border rounded-md text-sm font-medium ${currentPage === 1
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-            >
-              Previous
-            </button>
+          <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-gray-50 border-t">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(currentPage - 1) * patientsPerPage + 1}</span> to{" "}
+              <span className="font-medium">{Math.min(currentPage * patientsPerPage, totalRecords)}</span>{" "}
+              of <span className="font-medium">{totalRecords}</span> results
+            </div>
+            <div className="flex flex-col xs:flex-row sm:flex-row gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`w-full xs:w-auto sm:w-auto px-3 py-1 border rounded-md text-sm font-medium ${currentPage === 1
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  }`}
+              >
+                Previous
+              </button>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages}
-                className={`px-3 py-1 border rounded-md text-sm font-medium ${currentPage >= totalPages
+                className={`w-full xs:w-auto sm:w-auto px-3 py-1 border rounded-md text-sm font-medium ${currentPage >= totalPages
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "bg-white text-gray-700 hover:bg-gray-50"
                   }`}

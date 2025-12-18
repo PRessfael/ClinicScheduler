@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
   // Login function
   const login = async (identifier, password) => {
+    setLoading(true);
     try {
       if (!identifier || !password) {
         throw new Error("Username/Email and password are required");
@@ -90,6 +91,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Login error:", error);
       return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
     }
   };  // Register function
   const register = async (email, password, user_type, username, phoneNumber) => {
