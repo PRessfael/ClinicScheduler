@@ -22,14 +22,24 @@ const RecordsTable = ({
     return diagnosis.includes(currentSearch.toLowerCase());
   });
 
-  // Sort records by newest/oldest
+  // Sort records by newest/oldest based on record_id
+  const getSortableId = (r) => {
+    const id = r?.record_id;
+    if (typeof id === "number") return id;
+    if (typeof id === "string") {
+      const match = id.match(/\d+/);
+      return match ? parseInt(match[0], 10) : Number.NEGATIVE_INFINITY;
+    }
+    return Number.NEGATIVE_INFINITY;
+  };
+
   if (currentSortOrder === "newest") {
     filteredRecords = filteredRecords.sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      (a, b) => getSortableId(b) - getSortableId(a)
     );
   } else if (currentSortOrder === "oldest") {
     filteredRecords = filteredRecords.sort(
-      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      (a, b) => getSortableId(a) - getSortableId(b)
     );
   }
 
