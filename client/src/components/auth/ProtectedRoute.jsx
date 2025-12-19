@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "../../hooks/useAuth";
 
 // Protected route component that checks if the user is logged in
-export const ProtectedRoute = ({ component: Component, adminOnly = false, ...rest }) => {
+export const ProtectedRoute = ({ component: Component, adminOnly = false, allowedRoles, ...rest }) => {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
@@ -12,12 +12,19 @@ export const ProtectedRoute = ({ component: Component, adminOnly = false, ...res
       if (!user) {
         // Not logged in, redirect to login
         navigate("/login");
-      } else if (adminOnly && user.user_type !== "admin" && user.user_type !== "doctor") {
-        // Not an admin or doctor, but trying to access admin/doctor route
-        navigate("/dashboard");
+      } else {
+        // Normalize allowed roles: if adminOnly is true, only allow admin
+        const roles = adminOnly ? ["admin"] : allowedRoles;
+        if (Array.isArray(roles) && roles.length > 0) {
+          const userType = user.user_type;
+          if (!roles.includes(userType)) {
+            // Not permitted to access this route
+            navigate("/dashboard");
+          }
+        }
       }
     }
-  }, [user, loading, adminOnly, navigate]);
+  }, [user, loading, adminOnly, allowedRoles, navigate]);
 
   // Show loading spinner while checking auth
   if (loading) {
@@ -29,7 +36,13 @@ export const ProtectedRoute = ({ component: Component, adminOnly = false, ...res
   }
 
   // Only render the component if auth check passed
-  if (!user || (adminOnly && user.user_type !== "admin")) {
+  if (!user) {
+    return null;
+  }
+
+  // Enforce role-based access if provided
+  const roles = adminOnly ? ["admin"] : allowedRoles;
+  if (Array.isArray(roles) && roles.length > 0 && !roles.includes(user.user_type)) {
     return null;
   }
 

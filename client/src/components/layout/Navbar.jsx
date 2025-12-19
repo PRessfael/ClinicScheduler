@@ -27,17 +27,17 @@ const Navbar = () => {
 
     if (user.user_type === "admin") {
       // Admin-specific links
-      navLinks.push({ href: "/appointment-dashboard", label: "Appointments" });
+      navLinks.push({ href: "/admin/appointment-dashboard", label: "Appointments" });
     } else if (user.user_type === "doctor") {
       // Add Home and Contact Us links back to the doctor navigation bar
       navLinks = [
         { href: "/", label: "Home" },
         { href: "/doctor/dashboard", label: "Doctor Dashboard" },
-        { href: "/appointment-dashboard", label: "Appointments" },
+        { href: "/doctor/appointment-dashboard", label: "Appointments" },
       ];
     } else {
       // Regular user links
-      navLinks.push({ href: "/appointments", label: "My Appointments" });
+      navLinks.push({ href: "/user/appointments", label: "My Appointments" });
     }
   }
   const handleLogout = async (e) => {

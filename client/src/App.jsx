@@ -118,14 +118,30 @@ function Router() {
           <Route path="/complete-profile">
             <ProtectedRoute component={CompleteProfile} />
           </Route>
-          <Route path="/appointments">
+          {/* User appointments */}
+          <Route path="/user/appointments">
             <UserRoute component={Appointments} />
           </Route>
-          <Route path="/appointment-dashboard">
-            <ProtectedRoute component={AppointmentDashboard} adminOnly={false} />
+          {/* Backward compatibility redirect */}
+          <Route path="/appointments">
+            <Redirect to="/user/appointments" />
           </Route>
-          <Route path="/manage-schedules">
+
+          {/* Doctor & Admin appointment dashboard */}
+          <Route path="/doctor/appointment-dashboard">
+            <ProtectedRoute component={AppointmentDashboard} allowedRoles={["doctor"]} />
+          </Route>
+          <Route path="/admin/appointment-dashboard">
+            <ProtectedRoute component={AppointmentDashboard} allowedRoles={["admin"]} />
+          </Route>
+
+          {/* Admin manage schedule */}
+          <Route path="/admin/manage-schedule">
             <ProtectedRoute component={ManageSchedules} allowedRoles={["admin"]} />
+          </Route>
+          {/* Backward compatibility redirect */}
+          <Route path="/manage-schedules">
+            <Redirect to="/admin/manage-schedule" />
           </Route>
 
           <Route path="/login">

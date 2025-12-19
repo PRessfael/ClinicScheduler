@@ -86,7 +86,7 @@ const DoctorScheduleTable = () => {
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
             <div className="bg-gray-50 px-6 py-4 border-b flex flex-col items-center sm:flex-row sm:justify-between gap-4">
                 <h2 className="text-xl font-semibold text-gray-800 text-center sm:text-left">Doctor Schedules</h2>
-                <Link href="/manage-schedules">
+                <Link href="/admin/manage-schedule">
                     <a className="w-full sm:w-auto bg-[#1e5631] text-white px-4 py-2 rounded hover:bg-[#0d401d] text-center whitespace-nowrap">
                         Manage Schedules
                     </a>
