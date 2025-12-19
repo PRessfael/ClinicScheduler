@@ -1,37 +1,23 @@
-# Digital Medical Record and Appointment System for University Clinic
-
+Digital Medical Record and Appointment System for University Clinic
 This web-based system streamlines appointment scheduling and patient record management for university clinics. It features role-based access for administrators, doctors, and patients, allowing efficient handling of medical appointments, digital records, and patient information.
 
-## Key Features
-- Role-based dashboards (Admin, Doctor, Patient)
-- Appointment booking with time slot management
-- Patient queue tracking and status updates
-- Digital medical record management
-- User profile creation and editing
-- Responsive and user-friendly interface
+Key Features
+Role-based access and dashboards (Admin, Doctor, Patient)
+Secure authentication with Supabase (email or username login)
+Protected routes with role-aware guards
+Appointment booking with doctor availability and dynamic time slots
+Patient queue management with approve/cancel and status updates
+Digital medical records: upload, preview, and manage
+Patient profile management: view, edit, change password
+Doctor schedules and availability management
+Responsive UI using Tailwind CSS and shadcn/ui components
+Clear validations, toasts, and loading states for better UX
+Updates
+December 19, 2025
 
-
-## Updates
-May 25, 2025
-- Updated AppointmentDashboard to support queue entries with approval and cancellation logic.
-- Implemented patient profile management: added Profile and EditProfileForm components.
-- Improved user experience with patient profile checks and loading indicators.
-- Merged latest changes from 'may24Changes' branch.
-- Refactored AppointmentDashboard and Appointments: improved data handling and state sync.
-- Enhanced AppointmentForm: added dynamic time slot generation based on selected doctor and date.
-- Updated appointment logic to correctly handle null doctor_id on both admin and patient sides.
-- Refactored PatientInfoForm and AddPatientPopup: improved form validation and input handling.
-- Removed unused appointment-related code from useAppointments hook.
-- Added date picker enhancements to AppointmentForm and AppointmentDashboard.
-- Renamed section headers in AddPatientPopup and AdminDashboard for clarity.
-- Refined dashboard info cards styling and data display.
-
-
-May 20, 2025
-1. Added Appointment dashboard and routes in navigation bar in admin
-
-May 19, 2025
-1. Added Patient Records integration to Supabase
-2. Added integration of Supabase Auth with the login and registration form
-3. Login now accepts email and username
-4. Fixed registration form returning null username
+Added route protection via client/src/components/auth/ProtectedRoute.jsx and enforced role-based redirects.
+Polished schedules management: client/src/components/ui/DoctorAvailabilityTable.jsx, client/src/components/ui/DoctorScheduleTable.jsx.
+Improved records experience: client/src/components/records/RecordsUpload.jsx, client/src/components/records/RecordsTable.jsx.
+Refined appointment flow: dynamic time slots per doctor/date and better null doctor_id handling across admin/patient screens.
+UX: clearer toasts, loading states, and form validation in client/src/components/ui/AddPatientPopup.jsx and client/src/components/profile/EditProfileForm.jsx.
+Docs: updated Key Features and consolidated updates.
